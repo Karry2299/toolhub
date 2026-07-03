@@ -1,0 +1,117 @@
+{
+  "index.html": {
+    "file": "assets/index-Bn9dSP5g.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/views/Notes.vue",
+      "src/views/Todo.vue",
+      "src/views/PasswordGenerator.vue",
+      "src/views/QrGenerator.vue",
+      "src/views/IpLookup.vue",
+      "src/views/FileManager.vue",
+      "src/views/Login.vue",
+      "src/views/Register.vue"
+    ],
+    "css": [
+      "assets/index-73uE4I45.css"
+    ]
+  },
+  "src/views/FileManager.vue": {
+    "file": "assets/FileManager-f3QAQmVZ.js",
+    "name": "FileManager",
+    "src": "src/views/FileManager.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/FileManager-DjKODYYo.css"
+    ]
+  },
+  "src/views/IpLookup.vue": {
+    "file": "assets/IpLookup-DHQZqdCt.js",
+    "name": "IpLookup",
+    "src": "src/views/IpLookup.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/IpLookup-TRrdAJWL.css"
+    ]
+  },
+  "src/views/Login.vue": {
+    "file": "assets/Login-BezVtU3j.js",
+    "name": "Login",
+    "src": "src/views/Login.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Login-BnjA5dVt.css"
+    ]
+  },
+  "src/views/Notes.vue": {
+    "file": "assets/Notes-DgBF0Syl.js",
+    "name": "Notes",
+    "src": "src/views/Notes.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Notes-nvUgCBQe.css"
+    ]
+  },
+  "src/views/PasswordGenerator.vue": {
+    "file": "assets/PasswordGenerator-DOoQX5U6.js",
+    "name": "PasswordGenerator",
+    "src": "src/views/PasswordGenerator.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/PasswordGenerator-C311oUFE.css"
+    ]
+  },
+  "src/views/QrGenerator.vue": {
+    "file": "assets/QrGenerator-BfGVrnhc.js",
+    "name": "QrGenerator",
+    "src": "src/views/QrGenerator.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/QrGenerator-Be1OdrZG.css"
+    ]
+  },
+  "src/views/Register.vue": {
+    "file": "assets/Register-CJaZ30PL.js",
+    "name": "Register",
+    "src": "src/views/Register.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Register-BUQsv26q.css"
+    ]
+  },
+  "src/views/Todo.vue": {
+    "file": "assets/Todo-CJUnpX_w.js",
+    "name": "Todo",
+    "src": "src/views/Todo.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Todo-BH5wAlM_.css"
+    ]
+  }
+}
