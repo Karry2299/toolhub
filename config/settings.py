@@ -211,6 +211,7 @@ SIMPLEUI_CONFIG = {
                 {"name": "使用统计", "icon": "fas fa-chart-bar", "url": "/admin/core/toolusage/"},
                 {"name": "用户管理", "icon": "fas fa-user", "url": "/admin/auth/user/"},
                 {"name": "用户组", "icon": "fas fa-users", "url": "/admin/auth/group/"},
+                {"name": "访问日志", "icon": "fas fa-history", "url": "/admin/core/accesslog/"},
             ],
         },
     ],
