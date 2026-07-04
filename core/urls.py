@@ -22,6 +22,8 @@ urlpatterns = [
     path("api/auth/login/", views.login_api, name="auth-login"),
     path("api/auth/me/", views.me_api, name="auth-me"),
     path("api/auth/logout/", views.logout_api, name="auth-logout"),
+    path("api/deploy/update/", views.deploy_update_api, name="deploy-update"),
+
     path("api/files/<int:pk>/download/", views.file_download, name="file-download"),
     path("api/files/shared/<uuid:token>/", views.file_share, name="file-share"),
 ]

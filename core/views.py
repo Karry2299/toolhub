@@ -1,5 +1,6 @@
 ﻿import io
 import json
+import subprocess
 import requests
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -237,7 +238,7 @@ def me_api(request):
     token_key = request.META.get('HTTP_AUTHORIZATION', '').replace('Token ', '')
     try:
         token = Token.objects.get(key=token_key)
-        return JsonResponse({'username': token.user.username, 'user_id': token.user.id})
+        return JsonResponse({'username': token.user.username, 'user_id': token.user.id, 'is_superuser': token.user.is_superuser})
     except Token.DoesNotExist:
         return JsonResponse({'error': '\u672a\u767b\u5f55'}, status=401)
 
@@ -263,3 +264,34 @@ def file_share(request, token):
     data['share_url'] = request.build_absolute_uri(f"/api/files/shared/{token}/")
     data['download_url'] = request.build_absolute_uri(f"/api/files/{file_obj.pk}/download/")
     return JsonResponse(data)
+
+
+@api_view(["POST"])
+def deploy_update_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({"error": "无权限"}, status=403)
+    try:
+        from django.core.management import call_command
+        from io import StringIO
+        out = StringIO()
+        err = StringIO()
+        old_out = sys.stdout
+        old_err = sys.stderr
+        sys.stdout = out
+        sys.stderr = err
+        try:
+            call_command("deploy_update")
+            success = True
+            msg = "更新完成"
+        except SystemExit as e:
+            success = False
+            msg = f"更新失败 (code {e.code})"
+        finally:
+            sys.stdout = old_out
+            sys.stderr = old_err
+        return JsonResponse({
+            "success": success, "message": msg,
+            "output": out.getvalue(), "error": err.getvalue()
+        }, status=200 if success else 500)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)

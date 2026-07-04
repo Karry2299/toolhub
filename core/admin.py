@@ -1,4 +1,14 @@
 ﻿from django.contrib import admin
+from django.urls import path
+from django.template.response import TemplateResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import subprocess
+import json
+import os
+
 from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile
 
 
@@ -125,3 +135,41 @@ class UploadedFileAdmin(admin.ModelAdmin):
         if "zip" in t or "rar" in t: return "压缩包"
         return "其他"
     file_type_display.short_description = "类型"
+
+
+class DeployAdminView(admin.AdminSite):
+    pass
+
+
+def deploy_view(request):
+    """一键更新页面"""
+    context = {
+        "title": "一键部署更新",
+        "site_title": admin.site.site_title,
+        "site_header": admin.site.site_header,
+    }
+    return TemplateResponse(request, "admin/deploy.html", context)
+
+
+def deploy_ajax(request):
+    """AJAX 触发更新"""
+    if not request.user.is_superuser:
+        return JsonResponse({"success": False, "message": "无权限"}, status=403)
+
+    if request.method == "POST":
+        try:
+            update_script = os.path.join(settings.BASE_DIR, "deploy", "update.sh")
+            result = subprocess.run(
+                ["sudo", "bash", update_script],
+                capture_output=True, text=True, timeout=300
+            )
+            if result.returncode == 0:
+                return JsonResponse({"success": True, "message": "更新成功", "output": result.stdout})
+            else:
+                return JsonResponse({"success": False, "message": "更新失败", "output": result.stdout, "error": result.stderr})
+        except subprocess.TimeoutExpired:
+            return JsonResponse({"success": False, "message": "更新超时"})
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)})
+
+    return JsonResponse({"success": False, "message": "仅支持 POST"}, status=405)

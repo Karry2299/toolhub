@@ -55,8 +55,43 @@
       </router-link>
     </div>
   </div>
+  <div v-if="isAdmin" class="admin-section">
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;margin-top:40px;margin-bottom:16px;">
+      <h2 style="font-size:1.2em;font-weight:600;color:var(--text-primary);">🔧 系统管理</h2>
+    </div>
+    <button @click="startDeploy" :disabled="deploying" class="deploy-btn" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border:none;border-radius:var(--radius-md);cursor:pointer;font-size:0.9em;background:linear-gradient(135deg,#409EFF,#337ecc);color:#fff;transition:all 0.3s;">
+      <span>{{ deploying ? "⏳ 更新中..." : "🚀 一键部署更新" }}</span>
+    </button>
+    <div v-if="deployResult" :style="{marginTop:'12px',padding:'10px 14px',borderRadius:'var(--radius-md)',fontSize:'0.85em',background:deployResult.success ? '#f0f9f0' : '#fef0f0',color:deployResult.success ? '#67c23a' : '#f56c6c',border:'1px solid ' + (deployResult.success ? '#e1f3d8' : '#fde2e2')}">
+      {{ deployResult.message }}
+    </div>
+    <pre v-if="deployOutput" style="margin-top:10px;padding:12px;background:#1e1e1e;color:#d4d4d4;border-radius:6px;max-height:300px;overflow-y:auto;font-size:12px;line-height:1.5;white-space:pre-wrap;">{{ deployOutput }}</pre>
+  </div>
 </template>
 <script setup>
+import { ref } from "vue"
+import { auth, authHeaders } from "../auth.js"
+
+const isAdmin = auth.user?.is_superuser || false
+const deploying = ref(false)
+const deployResult = ref(null)
+const deployOutput = ref("")
+
+async function startDeploy() {
+  deploying.value = true
+  deployResult.value = null
+  deployOutput.value = ""
+  try {
+    const r = await fetch("/api/deploy/update/", { method: "POST", headers: authHeaders() })
+    const data = await r.json()
+    deployResult.value = { success: data.success, message: data.message || "更新完成" }
+    deployOutput.value = data.output || ""
+  } catch (e) {
+    deployResult.value = { success: false, message: "请求失败: " + e.message }
+  } finally {
+    deploying.value = false
+  }
+}
 </script>
 <style scoped>
 .home-header { text-align: center; padding: 40px 0 48px; }

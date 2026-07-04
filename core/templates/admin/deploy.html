@@ -1,0 +1,91 @@
+﻿{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div id="deploy-app" style="max-width:800px;margin:20px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:&#39;Microsoft YaHei&#39;,sans-serif;">
+  <h2 style="color:#409EFF;border-bottom:2px solid #409EFF;padding-bottom:10px;margin-bottom:20px;">
+    🔄 一键部署更新
+  </h2>
+
+  <div style="margin-bottom:20px;padding:15px;background:#f0f9ff;border-left:4px solid #409EFF;border-radius:4px;">
+    <p style="margin:5px 0;color:#666;">
+      点击下方按钮，将从 GitHub 拉取最新代码，自动完成以下操作：
+    </p>
+    <ul style="color:#666;line-height:1.8;">
+      <li>📥 从 GitHub 拉取最新代码</li>
+      <li>🐍 安装 Python 依赖</li>
+      <li>📦 构建 Vue 前端</li>
+      <li>🗄️ 执行数据库迁移</li>
+      <li>🔄 重启服务</li>
+    </ul>
+  </div>
+
+  <div style="margin-bottom:20px;">
+    <button id="deployBtn" onclick="startDeploy()" style="padding:12px 40px;font-size:16px;background:linear-gradient(135deg,#409EFF,#337ecc);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:all 0.3s;">
+      🚀 开始更新
+    </button>
+    <span id="status" style="margin-left:15px;color:#999;font-size:14px;"></span>
+  </div>
+
+  <div id="logContainer" style="display:none;">
+    <h3 style="color:#333;margin-bottom:10px;">📋 更新日志</h3>
+    <pre id="log" style="background:#1e1e1e;color:#d4d4d4;padding:15px;border-radius:6px;max-height:400px;overflow-y:auto;font-size:13px;line-height:1.6;"></pre>
+  </div>
+</div>
+
+<script>
+function startDeploy() {
+  var btn = document.getElementById("deployBtn");
+  var statusEl = document.getElementById("status");
+  var logContainer = document.getElementById("logContainer");
+  var logEl = document.getElementById("log");
+
+  btn.disabled = true;
+  btn.style.opacity = "0.6";
+  btn.textContent = "⏳ 更新中...";
+  statusEl.textContent = "正在更新，请耐心等待...";
+  logContainer.style.display = "block";
+  logEl.textContent = "";
+
+  fetch("/api/deploy/update/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": getCookie("csrftoken"),
+      "Content-Type": "application/json"
+    }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.output) {
+      logEl.textContent += data.output;
+    }
+    if (data.error) {
+      logEl.textContent += "\n[ERROR] " + data.error;
+    }
+    if (data.success) {
+      statusEl.textContent = "✅ " + data.message;
+      statusEl.style.color = "#67c23a";
+      btn.textContent = "✅ 更新完成";
+    } else {
+      statusEl.textContent = "❌ " + data.message;
+      statusEl.style.color = "#f56c6c";
+      btn.textContent = "🔄 重试";
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+  })
+  .catch(function(err) {
+    statusEl.textContent = "❌ 请求失败: " + err;
+    statusEl.style.color = "#f56c6c";
+    btn.textContent = "🔄 重试";
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  });
+}
+
+function getCookie(name) {
+  var match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : "";
+}
+</script>
+{% endblock %}
