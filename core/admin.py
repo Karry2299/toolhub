@@ -12,6 +12,26 @@ import os
 from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile, AccessLog
 
 
+@admin.register(AccessLog)
+class AccessLogAdmin(admin.ModelAdmin):
+    list_display = ["log_type_icon", "user", "ip_address", "path", "method", "created_at"]
+    list_filter = ["log_type", "created_at"]
+    search_fields = ["ip_address", "path", "user__username", "detail"]
+    date_hierarchy = "created_at"
+    readonly_fields = ["log_type", "user", "ip_address", "path", "method", "user_agent", "detail", "created_at"]
+    list_per_page = 50
+
+    def log_type_icon(self, obj):
+        icons = {"visit": "\U0001f310", "login": "\U0001f511", "upload": "\U0001f4e4", "api": "\u26a1"}
+        return f"{icons.get(obj.log_type, '\U0001f4dd')} {obj.get_log_type_display()}"
+    log_type_icon.short_description = "\u7c7b\u578b"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):
     list_display = ["title", "user", "created_at", "updated_at"]
