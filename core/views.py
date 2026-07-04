@@ -264,50 +264,62 @@ def file_share(request, token):
     file_obj.save(update_fields=["downloads_count"])
     response = FileResponse(file_obj.file, as_attachment=True, filename=file_obj.original_filename)
     return response
-
+@api_view(["GET"])
 def server_status_api(request):
+    """服务器状态（仅管理员可见）"""
     if not request.user.is_authenticated or not request.user.is_superuser:
         return JsonResponse({"error": "无权限"}, status=403)
     try:
-        disk = shutil.disk_usage("/")
-        total_gb = round(disk.total / (1024**3), 1)
-        used_gb = round(disk.used / (1024**3), 1)
-        free_gb = round(disk.free / (1024**3), 1)
-        percent = round(disk.used / disk.total * 100, 1)
-
-        mem_total = 0
-        mem_used = 0
-        mem_percent = 0
+        import json, subprocess, shutil
+        # 磁盘信息
+        disk_total = disk_used = disk_percent = 0
         try:
-            result = subprocess.run(["free", "-b"], capture_output=True, text=True, timeout=5)
-            for line in result.stdout.split("\n"):
-                if line.startswith("Mem:"):
-                    parts = line.split()
-                    mem_total = int(parts[1])
-                    mem_used = int(parts[2])
-                    mem_percent = round(mem_used / mem_total * 100, 1) if mem_total > 0 else 0
+            du = shutil.disk_usage("/")
+            disk_total = round(du.total / (1024**3), 1)
+            disk_used = round(du.used / (1024**3), 1)
+            disk_percent = round(du.used / du.total * 100, 1)
         except:
             pass
-
+        
+        # 内存信息
+        mem_total = mem_used = mem_percent = 0
+        try:
+            r = subprocess.run(["free", "-b"], capture_output=True, text=True, timeout=5)
+            for ln in r.stdout.split(chr(10)):
+                if ln.startswith("Mem:"):
+                    parts = ln.split()
+                    if len(parts) >= 3:
+                        mem_total = int(parts[1])
+                        mem_used = int(parts[2])
+                        mem_percent = round(mem_used / mem_total * 100, 1) if mem_total > 0 else 0
+        except:
+            pass
+        
+        # CPU 信息（使用 /proc/stat 更可靠）
         cpu_percent = 0
         try:
-            result = subprocess.run(
-                ["sh", "-c", "top -bn1 | grep 'Cpu(s)' | awk '{print $2+$4}'"],
-                capture_output=True, text=True, timeout=5
-            )
-            cpu_percent = round(float(result.stdout.strip()), 1)
+            with open("/proc/stat") as f:
+                line = f.readline()
+            parts = line.strip().split()
+            if len(parts) >= 5:
+                values = [int(x) for x in parts[1:]]
+                total = sum(values)
+                idle = values[3]
+                if total > 0:
+                    cpu_percent = round((1 - idle / total) * 100, 1)
         except:
             pass
-
+        
         return JsonResponse({
-            "disk": {"total": total_gb, "used": used_gb, "free": free_gb, "percent": percent},
+            "disk": {"total": disk_total, "used": disk_used, "free": round(disk_total - disk_used, 1), "percent": disk_percent},
             "memory": {"total": mem_total, "used": mem_used, "percent": mem_percent},
             "cpu": {"percent": cpu_percent},
         })
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": str(e), "detail": "服务器状态获取失败"}, status=500)
 
 
+@api_view(["POST"])
 @api_view(["POST"])
 def deploy_update_api(request):
     if not request.user.is_authenticated or not request.user.is_superuser:
