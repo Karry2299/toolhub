@@ -49,7 +49,7 @@ async function register() {
     const r = await fetch("/api/auth/register/", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: username.value, password: password.value}) })
     const data = await r.json()
     if (r.ok) {
-      auth.login(data.token, {username: data.username, id: data.user_id})
+      auth.login(data.token, {username: data.username, id: data.user_id, is_superuser: data.is_superuser})
       router.push("/")
     } else {
       error.value = data.error || "注册失败"

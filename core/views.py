@@ -213,7 +213,7 @@ def register_api(request):
             return JsonResponse({'error': '\u7528\u6237\u540d\u5df2\u5b58\u5728'}, status=400)
         user = User.objects.create_user(username=username, password=password, email=email)
         token, _ = Token.objects.get_or_create(user=user)
-        return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id})
+        return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id, 'is_superuser': user.is_superuser})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -228,7 +228,7 @@ def login_api(request):
         user = authenticate(username=username, password=password)
         if user:
             token, _ = Token.objects.get_or_create(user=user)
-            return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id})
+            return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id, 'is_superuser': user.is_superuser})
         return JsonResponse({'error': '\u7528\u6237\u540d\u6216\u5bc6\u7801\u9519\u8bef'}, status=401)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
@@ -266,6 +266,54 @@ def file_share(request, token):
     return JsonResponse(data)
 
 
+import subprocess
+import shutil
+
+
+@api_view(["GET"])
+def server_status_api(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({"error": "无权限"}, status=403)
+    try:
+        disk = shutil.disk_usage("/")
+        total_gb = round(disk.total / (1024**3), 1)
+        used_gb = round(disk.used / (1024**3), 1)
+        free_gb = round(disk.free / (1024**3), 1)
+        percent = round(disk.used / disk.total * 100, 1)
+
+        mem_total = 0
+        mem_used = 0
+        mem_percent = 0
+        try:
+            result = subprocess.run(["free", "-b"], capture_output=True, text=True, timeout=5)
+            for line in result.stdout.split("\n"):
+                if line.startswith("Mem:"):
+                    parts = line.split()
+                    mem_total = int(parts[1])
+                    mem_used = int(parts[2])
+                    mem_percent = round(mem_used / mem_total * 100, 1) if mem_total > 0 else 0
+        except:
+            pass
+
+        cpu_percent = 0
+        try:
+            result = subprocess.run(
+                ["sh", "-c", "top -bn1 | grep 'Cpu(s)' | awk '{print $2+$4}'"],
+                capture_output=True, text=True, timeout=5
+            )
+            cpu_percent = round(float(result.stdout.strip()), 1)
+        except:
+            pass
+
+        return JsonResponse({
+            "disk": {"total": total_gb, "used": used_gb, "free": free_gb, "percent": percent},
+            "memory": {"total": mem_total, "used": mem_used, "percent": mem_percent},
+            "cpu": {"percent": cpu_percent},
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 @api_view(["POST"])
 def deploy_update_api(request):
     if not request.user.is_authenticated or not request.user.is_superuser:
@@ -295,3 +343,4 @@ def deploy_update_api(request):
         }, status=200 if success else 500)
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+
