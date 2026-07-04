@@ -209,3 +209,7 @@ SIMPLEUI_CONFIG = {
         },
     ],
 }
+
+
+# 关闭 Cross-Origin-Opener-Policy 警告（HTTP 环境无需此头部）
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
