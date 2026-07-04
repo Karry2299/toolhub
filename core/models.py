@@ -199,3 +199,32 @@ class AccessLog(models.Model):
 # Add upload_ip to UploadedFile
 
         file_icon.short_description = "类型"
+class FileConversion(models.Model):
+    CONV_TYPES = (
+        ("pdf2word", "PDF转Word"),
+        ("pdf2txt", "PDF提取文本"),
+        ("pdf2images", "PDF转图片"),
+        ("merge_pdf", "合并PDF"),
+        ("split_pdf", "拆分PDF"),
+        ("word2pdf", "Word转PDF"),
+        ("excel2csv", "Excel转CSV"),
+        ("excel2json", "Excel转JSON"),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="用户")
+    conv_type = models.CharField(max_length=20, choices=CONV_TYPES, verbose_name="转换类型")
+    source_file = models.FileField(upload_to="conversions/input/", verbose_name="源文件")
+    result_file = models.FileField(upload_to="conversions/output/", blank=True, null=True, verbose_name="结果文件")
+    original_name = models.CharField(max_length=255, blank=True, default="", verbose_name="原始文件名")
+    status = models.CharField(max_length=20, default="pending", choices=[
+        ("pending", "待处理"), ("processing", "处理中"), ("completed", "已完成"), ("failed", "失败")
+    ], verbose_name="状态")
+    error_msg = models.TextField(blank=True, default="", verbose_name="错误信息")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "文件转换记录"
+        verbose_name_plural = "文件转换记录"
+
+    def __str__(self):
+        return f"{self.get_conv_type_display()} - {self.original_name}"

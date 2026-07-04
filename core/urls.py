@@ -27,4 +27,8 @@ urlpatterns = [
 
     path("api/files/<int:pk>/download/", views.file_download, name="file-download"),
     path("api/files/shared/<uuid:token>/", views.file_share, name="file-share"),
+    path("api/filetools/convert/", views.file_convert_api, name="file-convert"),
+    path("api/filetools/conversions/", views.file_conversion_list, name="file-conversions"),
+
 ]
+

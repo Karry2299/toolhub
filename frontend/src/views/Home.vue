@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home">
     <!-- Hero Section -->
     <div class="hero">
@@ -53,6 +53,14 @@
             <div class="metric-detail">实时负载</div>
           </div>
         </div>
+        <div class="metric-card">
+          <div class="metric-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">👁</div>
+          <div class="metric-body">
+            <div class="metric-label">网站访问</div>
+            <div class="metric-value">{{ serverStatus.visits.total || 0 }} <small>次</small></div>
+            <div class="metric-detail" style="margin-top:6px;font-size:0.82em;color:var(--text-secondary);">独立访客 <strong>{{ serverStatus.visits.unique_ips || 0 }}</strong> 人</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -105,6 +113,11 @@
           <h3 class="tc-title">IP 查询</h3>
           <p class="tc-desc">查询 IP 归属地信息</p>
         </router-link>
+        <router-link to="/file-tools" class="tool-card" style="--accent: #8b5cf6">
+            <div class="tc-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">📄</div>
+            <h3 class="tc-title">文档处理</h3>
+            <p class="tc-desc">PDF转Word、合并拆分、格式转换</p>
+          </router-link>
         <router-link to="/files" class="tool-card" style="--accent: #ec4899">
           <div class="tc-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">📁</div>
           <h3 class="tc-title">文件管理</h3>

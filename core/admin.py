@@ -9,7 +9,7 @@ import subprocess
 import json
 import os
 
-from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile, AccessLog
+from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile, AccessLog, FileConversion
 
 
 @admin.register(AccessLog)
@@ -31,6 +31,16 @@ class AccessLogAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+@admin.register(FileConversion)
+class FileConversionAdmin(admin.ModelAdmin):
+    list_display = ["conv_type", "user", "original_name", "status", "created_at"]
+    list_filter = ["conv_type", "status", "created_at"]
+    search_fields = ["original_name", "user__username"]
+    date_hierarchy = "created_at"
+    raw_id_fields = ["user"]
+    readonly_fields = ["source_file", "result_file", "original_name", "status", "error_msg", "created_at"]
+
 
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):

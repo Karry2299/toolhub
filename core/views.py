@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from rest_framework import viewsets
-from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage
+from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, FileConversion
 from .serializers import (NoteSerializer, TodoSerializer, UploadedFileSerializer, GeneratedPasswordSerializer,
                           SavedQRCodeSerializer, IPLookupHistorySerializer, ToolUsageSerializer)
 
@@ -331,11 +331,21 @@ def server_status_api(request):
                     cpu_percent = round((1 - idle / total) * 100, 1)
         except:
             pass
+
+        # 统计网站访问次数
+        try:
+            from .models import AccessLog
+            visit_count = AccessLog.objects.filter(log_type="visit").count()
+            user_count = AccessLog.objects.filter(log_type="visit").values("ip_address").distinct().count()
+        except:
+            visit_count = 0
+            user_count = 0
+
         
         return JsonResponse({
             "disk": {"total": disk_total, "used": disk_used, "free": round(disk_total - disk_used, 1), "percent": disk_percent},
             "memory": {"total": mem_total, "used": mem_used, "percent": mem_percent},
-            "cpu": {"percent": cpu_percent},
+            "cpu": {"percent": cpu_percent}, "visits": {"total": visit_count, "unique_ips": user_count},
         })
     except Exception as e:
         return JsonResponse({"error": str(e), "detail": "服务器状态获取失败"}, status=500)
@@ -373,3 +383,211 @@ def deploy_update_api(request):
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
+
+
+# ===== 文件转换处理 =====
+import os as _os
+import csv
+import json as _json
+from io import BytesIO
+from django.core.files.base import ContentFile
+from django.views.decorators.csrf import csrf_exempt
+
+def _get_file_path(relative_path):
+    return _os.path.join(settings.MEDIA_ROOT, relative_path)
+
+@csrf_exempt
+def file_convert_api(request):
+    """文件转换统一入口"""
+    if request.method != "POST":
+        return JsonResponse({"error": "\u4ec5\u652f\u6301POST"}, status=405)
+    conv_type = request.POST.get("conv_type", "")
+    upload = request.FILES.get("file")
+    if not conv_type:
+        return JsonResponse({"error": "\u8bf7\u6307\u5b9a\u8f6c\u6362\u7c7b\u578b"}, status=400)
+    if not upload:
+        return JsonResponse({"error": "\u8bf7\u4e0a\u4f20\u6587\u4ef6"}, status=400)
+    try:
+        rec = FileConversion(user=request.user if request.user.is_authenticated else None)
+        rec.conv_type = conv_type
+        rec.original_name = upload.name
+        rec.status = "processing"
+        rec.source_file.save(upload.name, upload, save=True)
+        if conv_type == "pdf2word":
+            result = _convert_pdf_to_word(rec)
+        elif conv_type == "pdf2txt":
+            result = _convert_pdf_to_text(rec)
+        elif conv_type == "pdf2images":
+            result = _convert_pdf_to_images(rec)
+        elif conv_type == "merge_pdf":
+            result = _merge_pdfs([rec])
+        elif conv_type == "split_pdf":
+            page = request.POST.get("page", "1")
+            result = _split_pdf(rec, page)
+        elif conv_type == "word2pdf":
+            result = _convert_word_to_pdf(rec)
+        elif conv_type == "excel2csv":
+            result = _convert_excel_to_csv(rec)
+        elif conv_type == "excel2json":
+            result = _convert_excel_to_json(rec)
+        else:
+            return JsonResponse({"error": f"\u4e0d\u652f\u6301\u7684\u8f6c\u6362\u7c7b\u578b: {conv_type}"}, status=400)
+        rec.status = "completed"
+        if result.get("path"):
+            rec.result_file = result["path"]
+        rec.save()
+        ToolUsage.objects.create(user=request.user if request.user.is_authenticated else None, tool="file", action=conv_type, detail=f"\u6587\u4ef6\u8f6c\u6362: {conv_type}")
+        return JsonResponse({"success": True, "message": result.get("message", "\u8f6c\u6362\u6210\u529f"), "filename": result.get("filename", ""), "download_url": result.get("download_url", "")})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+def _convert_pdf_to_word(rec):
+    from pdf2docx import Converter
+    input_path = rec.source_file.path
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    output_name = f"{base}.docx"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    cv = Converter(input_path)
+    cv.convert(output_path, start=0, end=None)
+    cv.close()
+    return {"message": "PDF \u5df2\u8f6c\u6362\u4e3a Word", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def _convert_pdf_to_text(rec):
+    import fitz
+    input_path = rec.source_file.path
+    doc = fitz.open(input_path)
+    text = ""
+    for page in doc: text += page.get_text() + "\n"
+    doc.close()
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    output_name = f"{base}.txt"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f: f.write(text)
+    return {"message": f"\u5df2\u63d0\u53d6\u6587\u672c ({len(text)} \u5b57\u7b26)", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def _convert_pdf_to_images(rec):
+    import fitz; import zipfile
+    input_path = rec.source_file.path
+    doc = fitz.open(input_path)
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    output_dir_rel = f"conversions/output/{base}_images"
+    output_dir = _os.path.join(settings.MEDIA_ROOT, output_dir_rel)
+    _os.makedirs(output_dir, exist_ok=True)
+    for i, page in enumerate(doc):
+        pix = page.get_pixmap(dpi=150)
+        pix.save(_os.path.join(output_dir, f"{base}_page_{i+1}.png"))
+    doc.close()
+    zip_name = f"{base}_images.zip"
+    zip_rel = f"conversions/output/{zip_name}"
+    zip_path = _os.path.join(settings.MEDIA_ROOT, zip_rel)
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for fn in _os.listdir(output_dir):
+            zf.write(_os.path.join(output_dir, fn), fn)
+    return {"message": f"\u5df2\u751f\u6210 {len(doc)} \u5f20\u56fe\u7247", "filename": zip_name, "path": zip_rel, "download_url": f"{settings.MEDIA_URL}{zip_rel}"}
+
+def _merge_pdfs(recs):
+    import fitz
+    merged = fitz.open()
+    for rec in recs:
+        fp = rec.source_file.path if hasattr(rec, "source_file") else rec.file.path
+        if fp.lower().endswith(".pdf"):
+            doc = fitz.open(fp); merged.insert_pdf(doc); doc.close()
+    output_name = f"merged_{_os.urandom(4).hex()}.pdf"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    merged.save(output_path); merged.close()
+    return {"message": f"\u5df2\u5408\u5e76 {len(recs)} \u4e2a PDF", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def _split_pdf(rec, page_str):
+    import fitz; import zipfile
+    input_path = rec.source_file.path
+    doc = fitz.open(input_path)
+    total = len(doc)
+    pages = [int(p.strip()) for p in page_str.split(",") if p.strip().isdigit()]
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    output_dir_rel = f"conversions/output/{base}_split"
+    output_dir = _os.path.join(settings.MEDIA_ROOT, output_dir_rel)
+    _os.makedirs(output_dir, exist_ok=True)
+    results = []
+    for p in pages:
+        if 1 <= p <= total:
+            new_doc = fitz.open()
+            new_doc.insert_pdf(doc, from_page=p-1, to_page=p-1)
+            name = f"{base}_page_{p}.pdf"
+            new_doc.save(_os.path.join(output_dir, name)); new_doc.close()
+            results.append(name)
+    doc.close()
+    zip_name = f"{base}_split_pages.zip"
+    zip_rel = f"conversions/output/{zip_name}"
+    zip_path = _os.path.join(settings.MEDIA_ROOT, zip_rel)
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for name in results: zf.write(_os.path.join(output_dir, name), name)
+    return {"message": f"\u5df2\u62c6\u5206 {len(results)} \u9875", "filename": zip_name, "path": zip_rel, "download_url": f"{settings.MEDIA_URL}{zip_rel}"}
+
+def _convert_word_to_pdf(rec):
+    from docx import Document; import fitz
+    input_path = rec.source_file.path
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    doc = Document(input_path)
+    pdf_doc = fitz.open()
+    page = pdf_doc.new_page()
+    page.insert_text(fitz.Point(50, 50), "\n".join([p.text for p in doc.paragraphs]), fontsize=11)
+    output_name = f"{base}.pdf"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    pdf_doc.save(output_path); pdf_doc.close()
+    return {"message": "Word \u5df2\u8f6c\u6362\u4e3a PDF", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def _convert_excel_to_csv(rec):
+    import openpyxl; import csv
+    input_path = rec.source_file.path
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    wb = openpyxl.load_workbook(input_path, read_only=True)
+    ws = wb.active
+    output_name = f"{base}.csv"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
+        csv.writer(f).writerows(list(ws.iter_rows(values_only=True)))
+    wb.close()
+    return {"message": "Excel \u5df2\u8f6c\u6362\u4e3a CSV", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def _convert_excel_to_json(rec):
+    import openpyxl; import json
+    input_path = rec.source_file.path
+    wb = openpyxl.load_workbook(input_path, read_only=True)
+    result = {}
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        headers = [str(h) if h else f"col_{i}" for i, h in enumerate(next(ws.iter_rows(values_only=True)))]
+        result[sheet_name] = [{headers[i]: (v if v is not None else "") for i, v in enumerate(row)} for row in ws.iter_rows(values_only=True)]
+    wb.close()
+    base = _os.path.splitext(_os.path.basename(input_path))[0]
+    output_name = f"{base}.json"
+    output_rel = f"conversions/output/{output_name}"
+    output_path = _os.path.join(settings.MEDIA_ROOT, output_rel)
+    _os.makedirs(_os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f: json.dump(result, f, ensure_ascii=False, indent=2)
+    return {"message": "Excel \u5df2\u8f6c\u6362\u4e3a JSON", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
+
+def file_conversion_list(request):
+    """获取用户的转换记录"""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "\u672a\u767b\u5f55"}, status=401)
+    qs = FileConversion.objects.filter(user=request.user).order_by("-created_at")[:20]
+    data = []
+    for c in qs:
+        dl_url = None
+        try:
+            if c.result_file and _os.path.exists(c.result_file.path):
+                dl_url = c.result_file.url
+        except: pass
+        data.append({"id": c.id, "conv_type": c.conv_type, "conv_type_display": c.get_conv_type_display(), "original_name": c.original_name, "status": c.status, "download_url": dl_url, "error_msg": c.error_msg, "created_at": c.created_at.isoformat()})
+    return JsonResponse({"data": data})

@@ -1,6 +1,6 @@
 {
   "index.html": {
-    "file": "assets/index-DNn5xLbB.js",
+    "file": "assets/index-hmpoQd-t.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -11,15 +11,16 @@
       "src/views/QrGenerator.vue",
       "src/views/IpLookup.vue",
       "src/views/FileManager.vue",
+      "src/views/FileTools.vue",
       "src/views/Login.vue",
       "src/views/Register.vue"
     ],
     "css": [
-      "assets/index-DzuCyBuB.css"
+      "assets/index-B2lKEBYa.css"
     ]
   },
   "src/views/FileManager.vue": {
-    "file": "assets/FileManager-BwDwZPrJ.js",
+    "file": "assets/FileManager-DBUyUdxv.js",
     "name": "FileManager",
     "src": "src/views/FileManager.vue",
     "isDynamicEntry": true,
@@ -30,8 +31,20 @@
       "assets/FileManager-qlVg_Iaw.css"
     ]
   },
+  "src/views/FileTools.vue": {
+    "file": "assets/FileTools-qFfFfXmM.js",
+    "name": "FileTools",
+    "src": "src/views/FileTools.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/FileTools-BAiXjgV3.css"
+    ]
+  },
   "src/views/IpLookup.vue": {
-    "file": "assets/IpLookup-BBOTiOdB.js",
+    "file": "assets/IpLookup-B_OVE03D.js",
     "name": "IpLookup",
     "src": "src/views/IpLookup.vue",
     "isDynamicEntry": true,
@@ -43,7 +56,7 @@
     ]
   },
   "src/views/Login.vue": {
-    "file": "assets/Login-BRAykSry.js",
+    "file": "assets/Login-Bnnhqcli.js",
     "name": "Login",
     "src": "src/views/Login.vue",
     "isDynamicEntry": true,
@@ -55,7 +68,7 @@
     ]
   },
   "src/views/Notes.vue": {
-    "file": "assets/Notes-B5edlbez.js",
+    "file": "assets/Notes-DyyToL2B.js",
     "name": "Notes",
     "src": "src/views/Notes.vue",
     "isDynamicEntry": true,
@@ -67,7 +80,7 @@
     ]
   },
   "src/views/PasswordGenerator.vue": {
-    "file": "assets/PasswordGenerator-C6T5EV-t.js",
+    "file": "assets/PasswordGenerator-CXMi8qfC.js",
     "name": "PasswordGenerator",
     "src": "src/views/PasswordGenerator.vue",
     "isDynamicEntry": true,
@@ -79,7 +92,7 @@
     ]
   },
   "src/views/QrGenerator.vue": {
-    "file": "assets/QrGenerator-CeBuMgNp.js",
+    "file": "assets/QrGenerator-DDEV3WHk.js",
     "name": "QrGenerator",
     "src": "src/views/QrGenerator.vue",
     "isDynamicEntry": true,
@@ -91,7 +104,7 @@
     ]
   },
   "src/views/Register.vue": {
-    "file": "assets/Register-B8PgfyKV.js",
+    "file": "assets/Register-RmLZiDQY.js",
     "name": "Register",
     "src": "src/views/Register.vue",
     "isDynamicEntry": true,
@@ -103,7 +116,7 @@
     ]
   },
   "src/views/Todo.vue": {
-    "file": "assets/Todo-DEhgzBnr.js",
+    "file": "assets/Todo-xOj6I36t.js",
     "name": "Todo",
     "src": "src/views/Todo.vue",
     "isDynamicEntry": true,
