@@ -258,19 +258,13 @@ def file_download(request, pk):
     return response
 
 def file_share(request, token):
+    """分享链接直接下载文件"""
     file_obj = get_object_or_404(UploadedFile, share_token=token)
-    serializer = UploadedFileSerializer(file_obj)
-    data = serializer.data
-    data['share_url'] = request.build_absolute_uri(f"/api/files/shared/{token}/")
-    data['download_url'] = request.build_absolute_uri(f"/api/files/{file_obj.pk}/download/")
-    return JsonResponse(data)
+    file_obj.downloads_count += 1
+    file_obj.save(update_fields=["downloads_count"])
+    response = FileResponse(file_obj.file, as_attachment=True, filename=file_obj.original_filename)
+    return response
 
-
-import subprocess
-import shutil
-
-
-@api_view(["GET"])
 def server_status_api(request):
     if not request.user.is_authenticated or not request.user.is_superuser:
         return JsonResponse({"error": "无权限"}, status=403)
