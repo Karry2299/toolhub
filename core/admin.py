@@ -9,7 +9,7 @@ import subprocess
 import json
 import os
 
-from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile
+from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile, AccessLog
 
 
 @admin.register(Note)

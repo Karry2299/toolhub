@@ -27,8 +27,6 @@ CSRF_TRUSTED_ORIGINS = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "http://127.0.0.
 
 CORS_ALLOWED_ORIGINS = os.getenv("DJANGO_CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",")
 CORS_ALLOW_ALL_ORIGINS = False
-DATA_UPLOAD_MAX_MEMORY_SIZE = None
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -89,6 +87,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
             ],
         },
+            {"name": "访问日志", "icon": "fas fa-history", "url": "/admin/core/accesslog/"}
     },
 ]
 
@@ -163,9 +162,6 @@ REST_FRAMEWORK = {
 
 
 # ===== SimpleUI 后台美化配置 =====
-SECURE_CROSS_ORIGIN_OPENER_POLICY = None
-
-
 SIMPLEUI_HOME_INFO = False
 SIMPLEUI_ANALYSIS = False
 SIMPLEUI_DEFAULT_THEME = "admin.lte.css"

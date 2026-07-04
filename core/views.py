@@ -36,7 +36,7 @@ class NoteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, upload_ip=_get_client_ip(self.request))
 
 class TodoViewSet(viewsets.ModelViewSet):
     queryset = Todo.objects.none()
@@ -195,6 +195,15 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
+def _get_client_ip(request):
+    """获取客户端真实IP"""
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -213,6 +222,18 @@ def register_api(request):
             return JsonResponse({'error': '\u7528\u6237\u540d\u5df2\u5b58\u5728'}, status=400)
         user = User.objects.create_user(username=username, password=password, email=email)
         token, _ = Token.objects.get_or_create(user=user)
+        # 记录登录日志
+        try:
+            from .models import AccessLog
+            AccessLog.objects.create(
+                log_type="login", user=user,
+                ip_address=_get_client_ip(request),
+                path="/api/auth/login/", method="POST",
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                detail=f"用户 {user.username} 登录"
+            )
+        except:
+            pass
         return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id, 'is_superuser': user.is_superuser})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)

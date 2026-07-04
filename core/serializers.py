@@ -62,7 +62,7 @@ class UploadedFileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UploadedFile
-        fields = ["id", "user", "file", "original_filename", "file_size", "file_type",
+        fields = ["id", "user", "file", "original_filename", "file_size", "file_type", "upload_ip",
                   "size_display", "file_icon", "is_favorite", "share_token",
                   "downloads_count", "download_url", "uploaded_at"]
         read_only_fields = ["user", "original_filename", "file_size", "file_type",

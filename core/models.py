@@ -132,6 +132,7 @@ class UploadedFile(models.Model):
     is_favorite = models.BooleanField(default=False, verbose_name="是否收藏")
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, verbose_name="分享令牌")
     downloads_count = models.IntegerField(default=0, verbose_name="下载次数")
+    upload_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name="上传IP")
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="上传时间")
 
     class Meta:
@@ -168,4 +169,33 @@ class UploadedFile(models.Model):
         if "zip" in t or "rar" in t or "tar" in t:
             return "📦"
         return "📎"
-    file_icon.short_description = "类型"
+
+
+class AccessLog(models.Model):
+    LOG_TYPES = (
+        ("visit", "页面访问"),
+        ("login", "用户登录"),
+        ("upload", "文件上传"),
+        ("api", "API调用"),
+    )
+    log_type = models.CharField(max_length=20, choices=LOG_TYPES, db_index=True, verbose_name="日志类型")
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="用户")
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name="IP地址")
+    path = models.CharField(max_length=500, blank=True, default="", verbose_name="访问路径")
+    method = models.CharField(max_length=10, blank=True, default="", verbose_name="请求方法")
+    user_agent = models.TextField(blank=True, default="", verbose_name="用户代理")
+    detail = models.CharField(max_length=500, blank=True, default="", verbose_name="备注")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="时间")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "访问日志"
+        verbose_name_plural = "访问日志"
+
+    def __str__(self):
+        u = self.user.username if self.user else "匿名"
+        return f"[{self.get_log_type_display()}] {u} @ {self.ip_address}";
+
+# Add upload_ip to UploadedFile
+
+        file_icon.short_description = "类型"
