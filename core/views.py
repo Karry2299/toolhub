@@ -1,6 +1,7 @@
 ﻿import io
 import json
 import subprocess
+import sys
 import requests
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -370,4 +371,5 @@ def deploy_update_api(request):
         }, status=200 if success else 500)
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+
 
