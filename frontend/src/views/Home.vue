@@ -88,6 +88,11 @@
     <div class="tools-section">
       <h2 class="section-label">实用工具</h2>
       <div class="tool-grid">
+        <router-link to="/dashboard" class="tool-card" style="--accent: #0f172a">
+          <div class="tc-icon" style="background:rgba(15,23,42,0.08);color:#0f172a;">▦</div>
+          <h3 class="tc-title">个人仪表盘</h3>
+          <p class="tc-desc">汇总待办、笔记、文件和账本</p>
+        </router-link>
         <router-link to="/notes" class="tool-card" style="--accent: #3b82f6">
           <div class="tc-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📓</div>
           <h3 class="tc-title">在线笔记</h3>
@@ -97,6 +102,21 @@
           <div class="tc-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">✅</div>
           <h3 class="tc-title">待办事项</h3>
           <p class="tc-desc">管理日常任务清单</p>
+        </router-link>
+        <router-link to="/productivity" class="tool-card" style="--accent: #14b8a6">
+          <div class="tc-icon" style="background:rgba(20,184,166,0.1);color:#0f766e;">⌁</div>
+          <h3 class="tc-title">效率工具</h3>
+          <p class="tc-desc">剪贴板、书签、提醒、短链和账本</p>
+        </router-link>
+        <router-link to="/utility-tools" class="tool-card" style="--accent: #6366f1">
+          <div class="tc-icon" style="background:rgba(99,102,241,0.1);color:#4f46e5;">Aa</div>
+          <h3 class="tc-title">文本与图片</h3>
+          <p class="tc-desc">文本转换、JSON、Base64、图片压缩</p>
+        </router-link>
+        <router-link to="/image-organizer" class="tool-card" style="--accent: #10b981">
+          <div class="tc-icon" style="background:rgba(16,185,129,0.1);color:#047857;">▧</div>
+          <h3 class="tc-title">图片整理</h3>
+          <p class="tc-desc">分类、标签、收藏、查重、批量压缩</p>
         </router-link>
         <router-link to="/password" class="tool-card" style="--accent: #f59e0b">
           <div class="tc-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">🔒</div>
@@ -134,7 +154,7 @@ import { auth, authHeaders } from "../auth.js"
 
 const isLoggedIn = auth.isLoggedIn
 const isAdmin = auth.user?.is_superuser || false
-const serverStatus = ref({ disk: { total:0, used:0, percent:0 }, memory: { total:0, used:0, percent:0 }, cpu: { percent:0 } })
+const serverStatus = ref({ disk: { total:0, used:0, percent:0 }, memory: { total:0, used:0, percent:0 }, cpu: { percent:0 }, visits: { total:0, unique_ips:0 } })
 const serverLoading = ref(false)
 const deploying = ref(false)
 const deployResult = ref(null)
@@ -164,14 +184,23 @@ async function fetchServerStatus() {
 async function refreshStatus() { await fetchServerStatus() }
 
 async function startDeploy() {
+  if (!confirm("确定要执行服务器一键更新吗？这会拉取代码、安装依赖、迁移数据库并重启服务。")) return
   deploying.value = true
   deployResult.value = null
   deployOutput.value = ""
   try {
     const r = await fetch("/api/deploy/update/", { method: "POST", headers: authHeaders() })
-    const data = await r.json()
-    deployResult.value = { success: data.success, message: data.message || "更新完成" }
-    deployOutput.value = data.output || ""
+    let data = {}
+    try {
+      data = await r.json()
+    } catch (e) {
+      data = { success: false, message: "服务器返回了非 JSON 响应" }
+    }
+    deployResult.value = {
+      success: !!data.success && r.ok,
+      message: data.message || (r.ok ? "更新完成" : "更新失败"),
+    }
+    deployOutput.value = [data.output, data.error ? "[ERROR]\n" + data.error : ""].filter(Boolean).join("\n")
   } catch (e) {
     deployResult.value = { success: false, message: "请求失败: " + e.message }
   } finally {

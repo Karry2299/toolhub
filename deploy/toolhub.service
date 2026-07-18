@@ -6,12 +6,7 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/var/www/toolhub
-Environment=DJANGO_SECRET_KEY=your-production-secret-key-here
-Environment=DJANGO_DEBUG=False
-Environment=DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-Environment=DJANGO_CSRF_TRUSTED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-Environment=DJANGO_CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-Environment=DATABASE_URL=postgres://toolhub_user:password@127.0.0.1:5432/toolhub
+EnvironmentFile=/var/www/toolhub/.env
 ExecStart=/var/www/toolhub/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 1800 --worker-class sync
 Restart=always
 RestartSec=5

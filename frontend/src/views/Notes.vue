@@ -1,11 +1,17 @@
 <template>
   <div class="notes">
-    <h2 class="section-title">📝 在线笔记</h2>
+    <h2 class="section-title">在线笔记</h2>
     <div class="notes-layout">
       <div class="notes-sidebar">
         <button class="btn-primary" @click="addNote">+ 新建笔记</button>
         <div class="note-list">
-          <div v-for="note in notes" :key="note.id" class="note-item" :class="{active: currentNote && currentNote.id === note.id}" @click="selectNote(note)">
+          <div
+            v-for="note in notes"
+            :key="note.id || note._temp"
+            class="note-item"
+            :class="{ active: currentNote && currentNote.id === note.id }"
+            @click="selectNote(note)"
+          >
             <div class="note-item-title">{{ note.title || "无标题" }}</div>
             <div class="note-item-preview">{{ note.content?.substring(0, 30) }}{{ note.content?.length > 30 ? "..." : "" }}</div>
           </div>
@@ -15,59 +21,84 @@
         <input v-model="currentNote.title" class="note-title-input" placeholder="笔记标题..." />
         <textarea v-model="currentNote.content" class="note-content-input" placeholder="开始写下想法..."></textarea>
         <div class="editor-actions">
-          <button class="btn-save" @click="saveNote">💾 保存</button>
-          <button class="btn-danger" @click="deleteNote">🗑️ 删除</button>
+          <button class="btn-save" @click="saveNote">保存</button>
+          <button class="btn-danger" @click="deleteNote">删除</button>
         </div>
       </div>
       <div class="notes-editor notes-empty" v-else>
-        <p>点击"新建笔记"或从列表中选择一个笔记</p>
+        <p>点击“新建笔记”或从列表中选择一条笔记</p>
       </div>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted } from "vue"
 import { authHeaders } from "../auth.js"
+
 const notes = ref([])
 const currentNote = ref(null)
 const API = "/api/notes/"
+
 async function fetchNotes() {
-  try { const r = await fetch(API, { headers: authHeaders() }); notes.value = await r.json() }
-  catch (e) { console.error(e) }
+  try {
+    const r = await fetch(API, { headers: authHeaders() })
+    notes.value = await r.json()
+  } catch (e) {
+    console.error(e)
+  }
 }
-function selectNote(note) { currentNote.value = { ...note } }
+
+function selectNote(note) {
+  currentNote.value = { ...note }
+}
+
 function addNote() {
   const newNote = { _temp: Date.now(), title: "", content: "" }
   notes.value.unshift(newNote)
   currentNote.value = newNote
 }
+
 async function saveNote() {
   const n = currentNote.value
   try {
     if (n.id) {
       const r = await fetch(API + n.id + "/", { method: "PUT", headers: authHeaders(), body: JSON.stringify(n) })
-      if (!r.ok) { console.error("Save failed:", r.status); return }
+      if (!r.ok) return
       const updated = await r.json()
-      Object.assign(n, updated)
+      const index = notes.value.findIndex(note => note.id === updated.id)
+      if (index >= 0) notes.value[index] = updated
+      currentNote.value = updated
     } else {
       const r = await fetch(API, { method: "POST", headers: authHeaders(), body: JSON.stringify(n) })
-      if (!r.ok) { console.error("Save failed:", r.status); return }
+      if (!r.ok) return
       const saved = await r.json()
       notes.value[0] = saved
       currentNote.value = saved
     }
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
+
 async function deleteNote() {
-  if (!currentNote.value?.id) { notes.value.shift(); currentNote.value = null; return }
+  if (!currentNote.value?.id) {
+    notes.value = notes.value.filter(n => n !== currentNote.value)
+    currentNote.value = null
+    return
+  }
   try {
     await fetch(API + currentNote.value.id + "/", { method: "DELETE", headers: authHeaders() })
     notes.value = notes.value.filter(n => n.id !== currentNote.value.id)
     currentNote.value = null
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
+
 onMounted(fetchNotes)
 </script>
+
 <style scoped>
 .section-title { font-size: 1.5em; color: #2c3e50; margin-bottom: 20px; }
 .notes-layout { display: flex; gap: 20px; height: calc(100vh - 200px); }

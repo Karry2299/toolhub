@@ -16,10 +16,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Environment variables (production overrides)
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-x(ij1q-^l3f=+p=^8ljb3m+t7d3!n8w9^ok2lofo2^$-dd^p=+")
-
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+
+# Environment variables (production overrides)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("DJANGO_SECRET_KEY is required. Set it in .env or server environment variables.")
 
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
@@ -64,7 +66,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "core.middleware.AccessLogMiddleware",
+    "core.access_log_middleware.AccessLogMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -104,6 +106,16 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES["default"] = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 
 
 # Password validation

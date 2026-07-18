@@ -13,6 +13,10 @@ db.sqlite3
 /media/
 /staticfiles/
 .env
+django_server*.log
+local_django_server*.log
+local_django_server.pid
+data_export*.json
 
 # Node / Frontend
 node_modules/

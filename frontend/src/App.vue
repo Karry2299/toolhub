@@ -23,16 +23,18 @@
             <span class="logo-text">ToolHub</span>
           </router-link>
           <nav class="app-nav">
-            <router-link to="/notes" class="nav-link">&#31508;&#35760;</router-link>
-            <router-link to="/todo" class="nav-link">&#24453;&#21150;</router-link>
-            <router-link to="/password" class="nav-link">&#23494;&#30721;</router-link>
-            <router-link to="/qrcode" class="nav-link">&#20108;&#32500;&#30721;</router-link>
-            <router-link to="/ip-lookup" class="nav-link">IP&#26597;&#35810;</router-link>
-            <router-link to="/files" class="nav-link">&#25991;&#20214;</router-link>
+            <router-link to="/dashboard" class="nav-link">仪表盘</router-link>
+            <router-link to="/notes" class="nav-link">笔记</router-link>
+            <router-link to="/todo" class="nav-link">待办</router-link>
+            <router-link to="/productivity" class="nav-link">效率</router-link>
+            <router-link to="/utility-tools" class="nav-link">工具箱</router-link>
+            <router-link to="/image-organizer" class="nav-link">图片</router-link>
+            <router-link to="/password" class="nav-link">密码</router-link>
+            <router-link to="/files" class="nav-link">文件</router-link>
           </nav>
           <div class="header-right">
             <span class="user-name">{{ auth.user?.username }}</span>
-            <button @click="handleLogout" class="btn btn-ghost logout-btn">&#36864;&#20986;</button>
+            <button @click="handleLogout" class="btn btn-ghost logout-btn">退出</button>
           </div>
         </div>
       </header>

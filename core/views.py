@@ -1,21 +1,44 @@
 ﻿import io
 import json
+import base64
+import hashlib
+import secrets
+import string
 import subprocess
 import sys
+import zipfile
+from decimal import Decimal
 import requests
+from django.core.files.base import ContentFile
+from django.db import models
+from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import viewsets
-from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, FileConversion
-from .serializers import (NoteSerializer, TodoSerializer, UploadedFileSerializer, GeneratedPasswordSerializer,
-                          SavedQRCodeSerializer, IPLookupHistorySerializer, ToolUsageSerializer)
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .models import (
+    Bookmark, ClipboardItem, Expense, FileConversion, GeneratedPassword,
+    ImageAsset, ImageProcessHistory, IPLookupHistory, Note, Reminder, SavedQRCode,
+    ShortLink, Todo, ToolUsage,
+)
+from .serializers import (
+    BookmarkSerializer, ClipboardItemSerializer, ExpenseSerializer,
+    GeneratedPasswordSerializer, ImageAssetSerializer, ImageProcessHistorySerializer,
+    IPLookupHistorySerializer, NoteSerializer, ReminderSerializer,
+    SavedQRCodeSerializer, ShortLinkSerializer, TodoSerializer,
+    ToolUsageSerializer, UploadedFileSerializer,
+)
 
 def index(request):
     index_path = settings.BASE_DIR / 'static' / 'vue' / 'index.html'
     if index_path.exists():
         with open(index_path, 'r', encoding='utf-8') as f:
             return HttpResponse(f.read(), content_type='text/html')
+    return HttpResponse('Frontend is building...', content_type='text/html')
 
 def api_root(request):
     return JsonResponse({
@@ -29,7 +52,11 @@ def api_root(request):
         },
     })
 
-    return HttpResponse('Frontend is building...', content_type='text/html')
+
+def _generate_short_code(length=6):
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
 
 class NoteViewSet(viewsets.ModelViewSet):
     queryset = Note.objects.none()
@@ -37,7 +64,7 @@ class NoteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Note.objects.filter(user=self.request.user)
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user, upload_ip=_get_client_ip(self.request))
+        serializer.save(user=self.request.user)
 
 class TodoViewSet(viewsets.ModelViewSet):
     queryset = Todo.objects.none()
@@ -79,6 +106,226 @@ class ToolUsageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
+class ClipboardItemViewSet(viewsets.ModelViewSet):
+    queryset = ClipboardItem.objects.none()
+    serializer_class = ClipboardItemSerializer
+
+    def get_queryset(self):
+        qs = ClipboardItem.objects.filter(user=self.request.user)
+        q = self.request.query_params.get("q", "").strip()
+        if q:
+            qs = qs.filter(models.Q(title__icontains=q) | models.Q(content__icontains=q) | models.Q(tags__icontains=q))
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        ToolUsage.objects.create(user=self.request.user, tool="clipboard", action="create")
+
+
+class BookmarkViewSet(viewsets.ModelViewSet):
+    queryset = Bookmark.objects.none()
+    serializer_class = BookmarkSerializer
+
+    def get_queryset(self):
+        qs = Bookmark.objects.filter(user=self.request.user)
+        q = self.request.query_params.get("q", "").strip()
+        if q:
+            qs = qs.filter(models.Q(title__icontains=q) | models.Q(url__icontains=q) | models.Q(category__icontains=q))
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        ToolUsage.objects.create(user=self.request.user, tool="bookmark", action="create")
+
+    @action(detail=True, methods=["post"])
+    def opened(self, request, pk=None):
+        item = self.get_object()
+        item.open_count += 1
+        item.save(update_fields=["open_count"])
+        return JsonResponse({"open_count": item.open_count})
+
+
+class ReminderViewSet(viewsets.ModelViewSet):
+    queryset = Reminder.objects.none()
+    serializer_class = ReminderSerializer
+
+    def get_queryset(self):
+        return Reminder.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        ToolUsage.objects.create(user=self.request.user, tool="reminder", action="create")
+
+
+class ShortLinkViewSet(viewsets.ModelViewSet):
+    queryset = ShortLink.objects.none()
+    serializer_class = ShortLinkSerializer
+
+    def get_queryset(self):
+        return ShortLink.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        code = serializer.validated_data.get("code") or _generate_short_code()
+        while ShortLink.objects.filter(code=code).exists():
+            code = _generate_short_code()
+        serializer.save(user=self.request.user, code=code)
+        ToolUsage.objects.create(user=self.request.user, tool="shortlink", action="create")
+
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    queryset = Expense.objects.none()
+    serializer_class = ExpenseSerializer
+
+    def get_queryset(self):
+        return Expense.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        ToolUsage.objects.create(user=self.request.user, tool="expense", action="create")
+
+
+class ImageProcessHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ImageProcessHistory.objects.none()
+    serializer_class = ImageProcessHistorySerializer
+
+    def get_queryset(self):
+        return ImageProcessHistory.objects.filter(user=self.request.user)
+
+
+class ImageAssetViewSet(viewsets.ModelViewSet):
+    queryset = ImageAsset.objects.none()
+    serializer_class = ImageAssetSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        qs = ImageAsset.objects.filter(user=self.request.user, is_user_deleted=False)
+        q = self.request.query_params.get("q", "").strip()
+        category = self.request.query_params.get("category", "").strip()
+        favorite = self.request.query_params.get("favorite", "").strip()
+        duplicates = self.request.query_params.get("duplicates", "").strip()
+        if q:
+            qs = qs.filter(
+                models.Q(original_filename__icontains=q)
+                | models.Q(title__icontains=q)
+                | models.Q(tags__icontains=q)
+            )
+        if category:
+            qs = qs.filter(category=category)
+        if favorite == "1":
+            qs = qs.filter(is_favorite=True)
+        if duplicates == "1":
+            duplicate_hashes = (
+                ImageAsset.objects.filter(user=self.request.user)
+                .filter(is_user_deleted=False)
+                .exclude(content_hash="")
+                .values("content_hash")
+                .annotate(total=models.Count("id"))
+                .filter(total__gt=1)
+                .values_list("content_hash", flat=True)
+            )
+            qs = qs.filter(content_hash__in=duplicate_hashes)
+        return qs
+
+    def perform_create(self, serializer):
+        upload = self.request.FILES.get("image")
+        metadata = {}
+        if upload:
+            raw = upload.read()
+            upload.seek(0)
+            metadata["original_filename"] = upload.name
+            metadata["file_size"] = upload.size
+            metadata["content_hash"] = hashlib.sha256(raw).hexdigest()
+            try:
+                from PIL import Image
+                img = Image.open(io.BytesIO(raw))
+                metadata["width"] = img.width
+                metadata["height"] = img.height
+            except Exception:
+                pass
+        serializer.save(user=self.request.user, **metadata)
+        ToolUsage.objects.create(user=self.request.user, tool="image", action="organize-upload")
+
+    @action(detail=True, methods=["post"])
+    def favorite(self, request, pk=None):
+        image = self.get_object()
+        image.is_favorite = not image.is_favorite
+        image.save(update_fields=["is_favorite", "updated_at"])
+        return JsonResponse({"is_favorite": image.is_favorite})
+
+    @action(detail=False, methods=["get"])
+    def categories(self, request):
+        data = (
+            ImageAsset.objects.filter(user=request.user)
+            .exclude(category="")
+            .values_list("category", flat=True)
+            .distinct()
+            .order_by("category")
+        )
+        return JsonResponse({"categories": list(data)})
+
+    @action(detail=False, methods=["post"])
+    def batch_compress(self, request):
+        ids = request.data.get("ids", [])
+        quality = max(10, min(95, int(request.data.get("quality") or 80)))
+        fmt = request.data.get("format", "WEBP").upper()
+        if fmt not in ("WEBP", "JPEG", "PNG"):
+            fmt = "WEBP"
+        ext = "jpg" if fmt == "JPEG" else fmt.lower()
+        qs = ImageAsset.objects.filter(user=request.user, id__in=ids, is_user_deleted=False)
+        if not qs.exists():
+            return JsonResponse({"error": "请选择图片"}, status=400)
+
+        zip_buffer = io.BytesIO()
+        from PIL import Image
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for asset in qs:
+                img = Image.open(asset.image.path)
+                if img.mode not in ("RGB", "RGBA"):
+                    img = img.convert("RGB")
+                output = io.BytesIO()
+                kwargs = {"format": fmt}
+                if fmt in ("WEBP", "JPEG"):
+                    kwargs["quality"] = quality
+                img.save(output, **kwargs)
+                base = _os.path.splitext(asset.original_filename or f"image-{asset.id}")[0]
+                zf.writestr(f"{base}.{ext}", output.getvalue())
+        zip_buffer.seek(0)
+        ToolUsage.objects.create(user=request.user, tool="image", action="batch-compress", detail=f"{qs.count()} images")
+        response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
+        response["Content-Disposition"] = 'attachment; filename="compressed-images.zip"'
+        return response
+
+    @action(detail=True, methods=["post"])
+    def compress_to_target(self, request, pk=None):
+        asset = self.get_object()
+        target_kb = int(request.data.get("target_kb") or 1024)
+        fmt = request.data.get("format", "WEBP").upper()
+        data, ext, final_size, final_width, final_height = _compress_image_file_to_target(
+            asset.image.path,
+            target_kb=target_kb,
+            fmt=fmt,
+        )
+        base = _os.path.splitext(asset.original_filename or f"image-{asset.id}")[0]
+        ToolUsage.objects.create(
+            user=request.user,
+            tool="image",
+            action="target-compress",
+            detail=f"{asset.original_filename} <= {target_kb}KB",
+        )
+        response = HttpResponse(data, content_type=f"image/{'jpeg' if ext == 'jpg' else ext}")
+        response["Content-Disposition"] = f'attachment; filename="{base}_under_{target_kb}kb.{ext}"'
+        response["X-Compressed-Size"] = str(final_size)
+        response["X-Compressed-Width"] = str(final_width)
+        response["X-Compressed-Height"] = str(final_height)
+        return response
+
+    def perform_destroy(self, instance):
+        instance.is_user_deleted = True
+        instance.user_deleted_at = timezone.now()
+        instance.is_favorite = False
+        instance.save(update_fields=["is_user_deleted", "user_deleted_at", "is_favorite", "updated_at"])
+
 def qrcode_api(request):
     try:
         import qrcode
@@ -96,8 +343,9 @@ def qrcode_api(request):
         buf = io.BytesIO()
         img.save(buf, format='PNG')
         if save == '1':
-            SavedQRCode.objects.create(content=text, size=size)
-            ToolUsage.objects.create(tool='qrcode', action='generate', detail=text[:100])
+            user = request.user if request.user.is_authenticated else None
+            SavedQRCode.objects.create(user=user, content=text, size=size)
+            ToolUsage.objects.create(user=user, tool='qrcode', action='generate', detail=text[:100])
         return HttpResponse(buf.getvalue(), content_type='image/png')
     except ImportError:
         return JsonResponse({'error': 'QRCode library not installed'}, status=500)
@@ -119,8 +367,9 @@ def ip_lookup_api(request):
                 'org': data.get('isp', '') or data.get('org', ''),
             }
             if save == '1':
-                IPLookupHistory.objects.create(query=q, **result)
-                ToolUsage.objects.create(tool='ip', action='lookup', detail=q)
+                user = request.user if request.user.is_authenticated else None
+                IPLookupHistory.objects.create(user=user, query=q, **result)
+                ToolUsage.objects.create(user=user, tool='ip', action='lookup', detail=q)
             return JsonResponse(result)
         else:
             return JsonResponse({'error': data.get('message', '\u67e5\u8be2\u5931\u8d25')}, status=400)
@@ -134,14 +383,15 @@ def password_save_api(request):
             pwd = data.get('password', '')
             length = data.get('length', 0)
             note = data.get('note', '')
+            user = request.user if request.user.is_authenticated else None
             pwd_obj = GeneratedPassword.objects.create(
-                password=pwd, length=length, note=note,
+                user=user, password=pwd, length=length, note=note,
                 has_upper=data.get('has_upper', False),
                 has_lower=data.get('has_lower', False),
                 has_digits=data.get('has_digits', False),
                 has_symbols=data.get('has_symbols', False),
             )
-            ToolUsage.objects.create(tool='password', action='generate')
+            ToolUsage.objects.create(user=user, tool='password', action='generate')
             return JsonResponse({'id': pwd_obj.id, 'password': pwd_obj.password, 'note': pwd_obj.note,
                                  'created_at': pwd_obj.created_at.isoformat()})
         except Exception as e:
@@ -164,7 +414,7 @@ class UploadedFileViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        return UploadedFile.objects.filter(user=self.request.user)
+        return UploadedFile.objects.filter(user=self.request.user, is_user_deleted=False)
 
     def perform_create(self, serializer):
         file_obj = self.request.FILES.get('file')
@@ -187,14 +437,20 @@ class UploadedFileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def favorites(self, request):
-        qs = UploadedFile.objects.filter(is_favorite=True)
+        qs = UploadedFile.objects.filter(user=request.user, is_favorite=True, is_user_deleted=False)
         serializer = self.get_serializer(qs, many=True)
         return JsonResponse(serializer.data, safe=False)
+
+    def perform_destroy(self, instance):
+        instance.is_user_deleted = True
+        instance.user_deleted_at = timezone.now()
+        instance.is_favorite = False
+        instance.save(update_fields=["is_user_deleted", "user_deleted_at", "is_favorite"])
 
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 def _get_client_ip(request):
     """获取客户端真实IP"""
@@ -250,6 +506,17 @@ def login_api(request):
         user = authenticate(username=username, password=password)
         if user:
             token, _ = Token.objects.get_or_create(user=user)
+            try:
+                from .models import AccessLog
+                AccessLog.objects.create(
+                    log_type="login", user=user,
+                    ip_address=_get_client_ip(request),
+                    path="/api/auth/login/", method="POST",
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                    detail=f"用户 {user.username} 登录"
+                )
+            except Exception:
+                pass
             return JsonResponse({'token': token.key, 'username': user.username, 'user_id': user.id, 'is_superuser': user.is_superuser})
         return JsonResponse({'error': '\u7528\u6237\u540d\u6216\u5bc6\u7801\u9519\u8bef'}, status=401)
     except Exception as e:
@@ -272,8 +539,10 @@ def logout_api(request):
     except:
         return JsonResponse({'message': 'OK'})
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def file_download(request, pk):
-    file_obj = get_object_or_404(UploadedFile, pk=pk)
+    file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user, is_user_deleted=False)
     file_obj.downloads_count += 1
     file_obj.save(update_fields=['downloads_count'])
     response = FileResponse(file_obj.file, as_attachment=True, filename=file_obj.original_filename)
@@ -281,11 +550,177 @@ def file_download(request, pk):
 
 def file_share(request, token):
     """分享链接直接下载文件"""
-    file_obj = get_object_or_404(UploadedFile, share_token=token)
+    file_obj = get_object_or_404(UploadedFile, share_token=token, is_user_deleted=False)
+    if file_obj.share_expires_at and timezone.now() > file_obj.share_expires_at:
+        return JsonResponse({"error": "分享链接已过期"}, status=410)
+    if file_obj.share_max_downloads and file_obj.downloads_count >= file_obj.share_max_downloads:
+        return JsonResponse({"error": "分享下载次数已用完"}, status=410)
+    if file_obj.share_password and request.GET.get("pwd", "") != file_obj.share_password:
+        return JsonResponse({"error": "分享密码错误或缺失"}, status=403)
     file_obj.downloads_count += 1
     file_obj.save(update_fields=["downloads_count"])
     response = FileResponse(file_obj.file, as_attachment=True, filename=file_obj.original_filename)
     return response
+
+
+def _compress_image_file_to_target(path_or_file, target_kb=1024, fmt="WEBP"):
+    from PIL import Image
+
+    target_bytes = max(20, int(target_kb)) * 1024
+    fmt = (fmt or "WEBP").upper()
+    if fmt not in ("WEBP", "JPEG", "PNG"):
+        fmt = "WEBP"
+    ext = "jpg" if fmt == "JPEG" else fmt.lower()
+
+    img = Image.open(path_or_file)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+    if fmt == "JPEG" and img.mode == "RGBA":
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        bg.paste(img, mask=img.split()[-1])
+        img = bg
+
+    def render(source, quality):
+        output = io.BytesIO()
+        kwargs = {"format": fmt, "optimize": True}
+        if fmt in ("WEBP", "JPEG"):
+            kwargs["quality"] = quality
+        source.save(output, **kwargs)
+        return output.getvalue()
+
+    best = None
+    current = img
+    for scale_step in range(0, 9):
+        if scale_step:
+            scale = 0.92 ** scale_step
+            size = (max(1, int(img.width * scale)), max(1, int(img.height * scale)))
+            current = img.resize(size, Image.Resampling.LANCZOS)
+
+        qualities = [95, 92, 88, 84, 80, 76, 72, 68, 64, 60, 55, 50, 45, 40]
+        if fmt == "PNG":
+            qualities = [95]
+        for quality in qualities:
+            data = render(current, quality)
+            if best is None or len(data) < len(best):
+                best = data
+            if len(data) <= target_bytes:
+                return data, ext, len(data), current.width, current.height
+
+    return best, ext, len(best), current.width, current.height
+
+
+def shortlink_redirect(request, code):
+    link = get_object_or_404(ShortLink, code=code)
+    link.visits += 1
+    link.save(update_fields=["visits"])
+    return redirect(link.target_url)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def dashboard_summary_api(request):
+    user = request.user
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    expense_total = Expense.objects.filter(user=user, spent_at__gte=month_start).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    upcoming = Reminder.objects.filter(user=user, completed=False, remind_at__gte=timezone.now()).order_by("remind_at")[:5]
+    recent_notes = Note.objects.filter(user=user).order_by("-updated_at")[:5]
+    return JsonResponse({
+        "counts": {
+            "notes": Note.objects.filter(user=user).count(),
+            "todos_open": Todo.objects.filter(user=user, completed=False).count(),
+            "files": UploadedFile.objects.filter(user=user, is_user_deleted=False).count(),
+            "bookmarks": Bookmark.objects.filter(user=user).count(),
+            "shortlinks": ShortLink.objects.filter(user=user).count(),
+            "reminders_open": Reminder.objects.filter(user=user, completed=False).count(),
+        },
+        "expense_month_total": str(expense_total),
+        "recent_notes": [{"id": n.id, "title": n.title or "无标题", "updated_at": n.updated_at.isoformat()} for n in recent_notes],
+        "upcoming_reminders": [{"id": r.id, "title": r.title, "remind_at": r.remind_at.isoformat()} for r in upcoming],
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def text_tool_log_api(request):
+    action_name = request.data.get("action", "process")
+    detail = request.data.get("detail", "")[:500]
+    ToolUsage.objects.create(user=request.user, tool="text", action=action_name, detail=detail)
+    return JsonResponse({"ok": True})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def image_process_api(request):
+    upload = request.FILES.get("file")
+    operation = request.POST.get("operation", "compress")
+    if not upload:
+        return JsonResponse({"error": "请上传图片"}, status=400)
+    try:
+        from PIL import Image
+        img = Image.open(upload)
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGB")
+
+        if operation == "base64":
+            raw = upload.read()
+            text = "data:%s;base64,%s" % (upload.content_type or "image/png", base64.b64encode(raw).decode("ascii"))
+            rec = ImageProcessHistory.objects.create(
+                user=request.user, operation=operation, original_name=upload.name, result_text=text[:100000]
+            )
+            ToolUsage.objects.create(user=request.user, tool="image", action=operation, detail=upload.name)
+            return JsonResponse({"success": True, "id": rec.id, "result_text": text})
+
+        if operation == "target":
+            target_kb = int(request.POST.get("target_kb") or 1024)
+            fmt = request.POST.get("format", "WEBP").upper()
+            data, ext, final_size, final_width, final_height = _compress_image_file_to_target(
+                upload,
+                target_kb=target_kb,
+                fmt=fmt,
+            )
+            base_name = _os.path.splitext(upload.name)[0]
+            result_name = f"{base_name}_under_{target_kb}kb.{ext}"
+            rec = ImageProcessHistory.objects.create(
+                user=request.user, operation=operation, original_name=upload.name
+            )
+            rec.result_file.save(result_name, ContentFile(data), save=True)
+            ToolUsage.objects.create(user=request.user, tool="image", action=operation, detail=f"{upload.name} <= {target_kb}KB")
+            serializer = ImageProcessHistorySerializer(rec, context={"request": request})
+            payload = serializer.data
+            payload["final_size"] = final_size
+            payload["final_width"] = final_width
+            payload["final_height"] = final_height
+            return JsonResponse({"success": True, "data": payload})
+
+        width = int(request.POST.get("width") or 0)
+        height = int(request.POST.get("height") or 0)
+        if operation == "resize" and width > 0 and height > 0:
+            img = img.resize((width, height))
+
+        fmt = request.POST.get("format", "WEBP").upper()
+        if fmt not in ("WEBP", "PNG", "JPEG"):
+            fmt = "WEBP"
+        quality = max(10, min(95, int(request.POST.get("quality") or 80)))
+        ext = "jpg" if fmt == "JPEG" else fmt.lower()
+        output = io.BytesIO()
+        save_kwargs = {"format": fmt}
+        if fmt in ("WEBP", "JPEG"):
+            save_kwargs["quality"] = quality
+        img.save(output, **save_kwargs)
+        output.seek(0)
+
+        base_name = _os.path.splitext(upload.name)[0]
+        result_name = f"{base_name}_{operation}.{ext}"
+        rec = ImageProcessHistory.objects.create(
+            user=request.user, operation=operation, original_name=upload.name
+        )
+        rec.result_file.save(result_name, ContentFile(output.getvalue()), save=True)
+        ToolUsage.objects.create(user=request.user, tool="image", action=operation, detail=upload.name)
+        serializer = ImageProcessHistorySerializer(rec, context={"request": request})
+        return JsonResponse({"success": True, "data": serializer.data})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 @api_view(["GET"])
 def server_status_api(request):
     """服务器状态（仅管理员可见）"""
@@ -352,33 +787,29 @@ def server_status_api(request):
 
 
 @api_view(["POST"])
-@api_view(["POST"])
 def deploy_update_api(request):
     if not request.user.is_authenticated or not request.user.is_superuser:
         return JsonResponse({"error": "无权限"}, status=403)
     try:
         from django.core.management import call_command
+        from django.core.management.base import CommandError
         from io import StringIO
         out = StringIO()
         err = StringIO()
-        old_out = sys.stdout
-        old_err = sys.stderr
-        sys.stdout = out
-        sys.stderr = err
         try:
-            call_command("deploy_update")
+            call_command("deploy_update", stdout=out, stderr=err)
             success = True
             msg = "更新完成"
+        except CommandError as e:
+            success = False
+            msg = str(e)
         except SystemExit as e:
             success = False
             msg = f"更新失败 (code {e.code})"
-        finally:
-            sys.stdout = old_out
-            sys.stderr = old_err
         return JsonResponse({
             "success": success, "message": msg,
             "output": out.getvalue(), "error": err.getvalue()
-        }, status=200 if success else 500)
+        })
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
@@ -397,6 +828,8 @@ def _get_file_path(relative_path):
     return _os.path.join(settings.MEDIA_ROOT, relative_path)
 
 @csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def file_convert_api(request):
     """文件转换统一入口"""
     if request.method != "POST":
@@ -408,7 +841,7 @@ def file_convert_api(request):
     if not upload:
         return JsonResponse({"error": "\u8bf7\u4e0a\u4f20\u6587\u4ef6"}, status=400)
     try:
-        rec = FileConversion(user=request.user if request.user.is_authenticated else None)
+        rec = FileConversion(user=request.user)
         rec.conv_type = conv_type
         rec.original_name = upload.name
         rec.status = "processing"
@@ -436,7 +869,7 @@ def file_convert_api(request):
         if result.get("path"):
             rec.result_file = result["path"]
         rec.save()
-        ToolUsage.objects.create(user=request.user if request.user.is_authenticated else None, tool="file", action=conv_type, detail=f"\u6587\u4ef6\u8f6c\u6362: {conv_type}")
+        ToolUsage.objects.create(user=request.user, tool="file", action=conv_type, detail=f"\u6587\u4ef6\u8f6c\u6362: {conv_type}")
         return JsonResponse({"success": True, "message": result.get("message", "\u8f6c\u6362\u6210\u529f"), "filename": result.get("filename", ""), "download_url": result.get("download_url", "")})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
@@ -577,6 +1010,8 @@ def _convert_excel_to_json(rec):
     with open(output_path, "w", encoding="utf-8") as f: json.dump(result, f, ensure_ascii=False, indent=2)
     return {"message": "Excel \u5df2\u8f6c\u6362\u4e3a JSON", "filename": output_name, "path": output_rel, "download_url": f"{settings.MEDIA_URL}{output_rel}"}
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def file_conversion_list(request):
     """获取用户的转换记录"""
     if not request.user.is_authenticated:

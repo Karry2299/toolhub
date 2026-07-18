@@ -5,11 +5,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-import subprocess
-import json
-import os
 
-from .models import Note, Todo, GeneratedPassword, SavedQRCode, IPLookupHistory, ToolUsage, UploadedFile, AccessLog, FileConversion
+from .models import (
+    AccessLog, Bookmark, ClipboardItem, Expense, FileConversion,
+    GeneratedPassword, ImageAsset, ImageProcessHistory, IPLookupHistory, Note, Reminder,
+    SavedQRCode, ShortLink, Todo, ToolUsage, UploadedFile,
+)
 
 
 @admin.register(AccessLog)
@@ -40,6 +41,69 @@ class FileConversionAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
     raw_id_fields = ["user"]
     readonly_fields = ["source_file", "result_file", "original_name", "status", "error_msg", "created_at"]
+
+
+@admin.register(ClipboardItem)
+class ClipboardItemAdmin(admin.ModelAdmin):
+    list_display = ["title", "user", "tags", "pinned", "updated_at"]
+    list_filter = ["pinned", "updated_at"]
+    search_fields = ["title", "content", "tags", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(Bookmark)
+class BookmarkAdmin(admin.ModelAdmin):
+    list_display = ["title", "category", "user", "open_count", "created_at"]
+    list_filter = ["category", "created_at"]
+    search_fields = ["title", "url", "note", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["open_count", "created_at"]
+
+
+@admin.register(Reminder)
+class ReminderAdmin(admin.ModelAdmin):
+    list_display = ["title", "user", "remind_at", "repeat", "completed", "created_at"]
+    list_filter = ["completed", "repeat", "remind_at"]
+    search_fields = ["title", "note", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["created_at"]
+
+
+@admin.register(ShortLink)
+class ShortLinkAdmin(admin.ModelAdmin):
+    list_display = ["code", "title", "user", "visits", "created_at"]
+    list_filter = ["created_at"]
+    search_fields = ["code", "target_url", "title", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["visits", "created_at"]
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ["category", "amount", "user", "spent_at", "created_at"]
+    list_filter = ["category", "spent_at"]
+    search_fields = ["category", "note", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["created_at"]
+
+
+@admin.register(ImageProcessHistory)
+class ImageProcessHistoryAdmin(admin.ModelAdmin):
+    list_display = ["operation", "original_name", "user", "created_at"]
+    list_filter = ["operation", "created_at"]
+    search_fields = ["operation", "original_name", "user__username"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["operation", "original_name", "result_file", "result_text", "created_at"]
+
+
+@admin.register(ImageAsset)
+class ImageAssetAdmin(admin.ModelAdmin):
+    list_display = ["original_filename", "title", "category", "user", "is_favorite", "is_user_deleted", "user_deleted_at", "width", "height", "file_size", "updated_at"]
+    list_filter = ["category", "is_favorite", "is_user_deleted", "user_deleted_at", "updated_at"]
+    search_fields = ["original_filename", "title", "category", "tags", "user__username", "content_hash"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["original_filename", "file_size", "width", "height", "content_hash", "is_user_deleted", "user_deleted_at", "created_at", "updated_at"]
 
 
 @admin.register(Note)
@@ -140,12 +204,12 @@ class ToolUsageAdmin(admin.ModelAdmin):
 
 @admin.register(UploadedFile)
 class UploadedFileAdmin(admin.ModelAdmin):
-    list_display = ["original_filename", "user", "file_size_display", "file_type_display", "is_favorite", "downloads_count", "uploaded_at"]
-    list_filter = ["is_favorite", "file_type", "uploaded_at"]
+    list_display = ["original_filename", "user", "file_size_display", "file_type_display", "is_favorite", "is_user_deleted", "user_deleted_at", "downloads_count", "uploaded_at"]
+    list_filter = ["is_favorite", "is_user_deleted", "user_deleted_at", "file_type", "uploaded_at"]
     search_fields = ["original_filename", "user__username"]
     date_hierarchy = "uploaded_at"
     raw_id_fields = ["user"]
-    readonly_fields = ["file_size", "share_token", "downloads_count", "uploaded_at"]
+    readonly_fields = ["file_size", "share_token", "downloads_count", "is_user_deleted", "user_deleted_at", "uploaded_at"]
     list_display_links = ["original_filename"]
     list_per_page = 20
 
@@ -188,18 +252,18 @@ def deploy_ajax(request):
 
     if request.method == "POST":
         try:
-            update_script = os.path.join(settings.BASE_DIR, "deploy", "update.sh")
-            result = subprocess.run(
-                ["sudo", "bash", update_script],
-                capture_output=True, text=True, timeout=300
-            )
-            if result.returncode == 0:
-                return JsonResponse({"success": True, "message": "更新成功", "output": result.stdout})
-            else:
-                return JsonResponse({"success": False, "message": "更新失败", "output": result.stdout, "error": result.stderr})
-        except subprocess.TimeoutExpired:
-            return JsonResponse({"success": False, "message": "更新超时"})
+            from django.core.management import call_command
+            from django.core.management.base import CommandError
+            from io import StringIO
+
+            out = StringIO()
+            err = StringIO()
+            try:
+                call_command("deploy_update", stdout=out, stderr=err)
+                return JsonResponse({"success": True, "message": "更新成功", "output": out.getvalue(), "error": err.getvalue()})
+            except CommandError as e:
+                return JsonResponse({"success": False, "message": str(e), "output": out.getvalue(), "error": err.getvalue()})
         except Exception as e:
-            return JsonResponse({"success": False, "message": str(e)})
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
 
     return JsonResponse({"success": False, "message": "仅支持 POST"}, status=405)

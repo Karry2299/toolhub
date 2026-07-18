@@ -4,8 +4,12 @@ import Home from "../views/Home.vue"
 
 const routes = [
   { path: "/", name: "Home", component: Home, meta: { title: "首页" } },
+  { path: "/dashboard", name: "Dashboard", component: () => import("../views/Dashboard.vue"), meta: { title: "个人仪表盘" } },
   { path: "/notes", name: "Notes", component: () => import("../views/Notes.vue"), meta: { title: "在线笔记" } },
   { path: "/todo", name: "Todo", component: () => import("../views/Todo.vue"), meta: { title: "待办事项" } },
+  { path: "/productivity", name: "Productivity", component: () => import("../views/Productivity.vue"), meta: { title: "效率工具" } },
+  { path: "/utility-tools", name: "UtilityTools", component: () => import("../views/UtilityTools.vue"), meta: { title: "文本与图片工具" } },
+  { path: "/image-organizer", name: "ImageOrganizer", component: () => import("../views/ImageOrganizer.vue"), meta: { title: "图片整理" } },
   { path: "/password", name: "Password", component: () => import("../views/PasswordGenerator.vue"), meta: { title: "密码生成器" } },
   { path: "/qrcode", name: "QRCode", component: () => import("../views/QrGenerator.vue"), meta: { title: "二维码生成" } },
   { path: "/ip-lookup", name: "IpLookup", component: () => import("../views/IpLookup.vue"), meta: { title: "IP/域名查询" } },

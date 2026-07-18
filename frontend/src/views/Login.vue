@@ -25,33 +25,50 @@
           <input v-model="password" type="password" class="input" placeholder="输入密码" required />
         </div>
         <p v-if="error" class="auth-error">{{ error }}</p>
-        <button type="submit" class="btn btn-accent auth-btn" :disabled="loading">{{ loading ? "登录中..." : "登录" }}</button>
+        <button type="submit" class="btn btn-accent auth-btn" :disabled="loading">
+          {{ loading ? "登录中..." : "登录" }}
+        </button>
       </form>
       <p class="auth-footer">还没有账号？ <router-link to="/register" class="auth-link">立即注册</router-link></p>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "../auth.js"
+
 const router = useRouter()
-const username = ref(""); const password = ref(""); const error = ref(""); const loading = ref(false)
+const username = ref("")
+const password = ref("")
+const error = ref("")
+const loading = ref(false)
+
 async function login() {
-  error.value = ""; loading.value = true
+  error.value = ""
+  loading.value = true
   try {
-    const r = await fetch("/api/auth/login/", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: username.value, password: password.value}) })
+    const r = await fetch("/api/auth/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.value, password: password.value }),
+    })
     const data = await r.json()
     if (r.ok) {
-      auth.login(data.token, {username: data.username, id: data.user_id, is_superuser: data.is_superuser})
+      auth.login(data.token, { username: data.username, id: data.user_id, is_superuser: data.is_superuser })
       router.push("/")
     } else {
       error.value = data.error || "登录失败"
     }
-  } catch(e) { error.value = "网络错误" }
-  finally { loading.value = false }
+  } catch (e) {
+    error.value = "网络错误"
+  } finally {
+    loading.value = false
+  }
 }
 </script>
+
 <style scoped>
 .auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 200px); }
 .auth-card { padding: 40px; max-width: 380px; width: 100%; }

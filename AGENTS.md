@@ -78,8 +78,8 @@ python manage.py createsuperuser
 
 ## 备忘
 
-- 管理员账号: admin / admin123
 - 后台地址: http://127.0.0.1:8000/admin/
+- 管理员账号请通过本地 `.env` 或服务器部署脚本单独设置，不写入仓库。
 
 ## 关键配置
 

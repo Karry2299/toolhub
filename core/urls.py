@@ -10,6 +10,13 @@ router.register(r"qrcodes", views.SavedQRCodeViewSet)
 router.register(r"ip-lookups", views.IPLookupHistoryViewSet)
 router.register(r"tool-usage", views.ToolUsageViewSet)
 router.register(r"files", views.UploadedFileViewSet)
+router.register(r"clipboard", views.ClipboardItemViewSet)
+router.register(r"bookmarks", views.BookmarkViewSet)
+router.register(r"reminders", views.ReminderViewSet)
+router.register(r"shortlinks", views.ShortLinkViewSet)
+router.register(r"expenses", views.ExpenseViewSet)
+router.register(r"image-history", views.ImageProcessHistoryViewSet)
+router.register(r"image-assets", views.ImageAssetViewSet)
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -24,11 +31,15 @@ urlpatterns = [
     path("api/auth/logout/", views.logout_api, name="auth-logout"),
     path("api/deploy/update/", views.deploy_update_api, name="deploy-update"),
     path("api/server/status/", views.server_status_api, name="server-status"),
+    path("api/dashboard/summary/", views.dashboard_summary_api, name="dashboard-summary"),
+    path("api/text-tools/log/", views.text_tool_log_api, name="text-tool-log"),
+    path("api/image-tools/process/", views.image_process_api, name="image-process"),
 
     path("api/files/<int:pk>/download/", views.file_download, name="file-download"),
     path("api/files/shared/<uuid:token>/", views.file_share, name="file-share"),
     path("api/filetools/convert/", views.file_convert_api, name="file-convert"),
     path("api/filetools/conversions/", views.file_conversion_list, name="file-conversions"),
+    path("s/<slug:code>/", views.shortlink_redirect, name="shortlink-redirect"),
 
 ]
 

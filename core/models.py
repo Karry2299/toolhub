@@ -99,8 +99,15 @@ class ToolUsage(models.Model):
         ("qrcode", "二维码"),
         ("ip", "IP查询"),
         ("file", "文件管理"),
+        ("clipboard", "剪贴板"),
+        ("bookmark", "书签"),
+        ("reminder", "提醒"),
+        ("shortlink", "短链接"),
+        ("expense", "账本"),
+        ("text", "文本工具"),
+        ("image", "图片工具"),
     ]
-    tool = models.CharField(max_length=20, choices=TOOL_CHOICES, verbose_name="工具")
+    tool = models.CharField(max_length=30, choices=TOOL_CHOICES, verbose_name="工具")
     action = models.CharField(max_length=50, default="use", verbose_name="操作")
     detail = models.CharField(max_length=500, blank=True, default="", verbose_name="详情")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="使用时间")
@@ -131,8 +138,13 @@ class UploadedFile(models.Model):
     file_type = models.CharField(max_length=100, blank=True, default="", verbose_name="文件类型")
     is_favorite = models.BooleanField(default=False, verbose_name="是否收藏")
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, verbose_name="分享令牌")
+    share_password = models.CharField(max_length=128, blank=True, default="", verbose_name="分享密码")
+    share_expires_at = models.DateTimeField(blank=True, null=True, verbose_name="分享过期时间")
+    share_max_downloads = models.PositiveIntegerField(default=0, verbose_name="最大下载次数")
     downloads_count = models.IntegerField(default=0, verbose_name="下载次数")
     upload_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name="上传IP")
+    is_user_deleted = models.BooleanField(default=False, db_index=True, verbose_name="用户已删除")
+    user_deleted_at = models.DateTimeField(blank=True, null=True, verbose_name="用户删除时间")
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="上传时间")
 
     class Meta:
@@ -171,6 +183,142 @@ class UploadedFile(models.Model):
         return "📎"
 
 
+class ClipboardItem(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    title = models.CharField(max_length=120, blank=True, default="", verbose_name="标题")
+    content = models.TextField(verbose_name="内容")
+    tags = models.CharField(max_length=200, blank=True, default="", verbose_name="标签")
+    pinned = models.BooleanField(default=False, verbose_name="置顶")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        ordering = ["-pinned", "-updated_at"]
+        verbose_name = "剪贴板条目"
+        verbose_name_plural = "剪贴板"
+
+    def __str__(self):
+        return self.title or self.content[:30]
+
+
+class Bookmark(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    title = models.CharField(max_length=160, verbose_name="标题")
+    url = models.URLField(max_length=500, verbose_name="网址")
+    category = models.CharField(max_length=80, blank=True, default="", verbose_name="分类")
+    note = models.TextField(blank=True, default="", verbose_name="备注")
+    open_count = models.PositiveIntegerField(default=0, verbose_name="打开次数")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["category", "title"]
+        verbose_name = "书签"
+        verbose_name_plural = "书签管理"
+
+    def __str__(self):
+        return self.title
+
+
+class Reminder(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    title = models.CharField(max_length=160, verbose_name="标题")
+    remind_at = models.DateTimeField(verbose_name="提醒时间")
+    repeat = models.CharField(max_length=20, blank=True, default="", verbose_name="重复")
+    completed = models.BooleanField(default=False, verbose_name="已完成")
+    note = models.TextField(blank=True, default="", verbose_name="备注")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["completed", "remind_at"]
+        verbose_name = "提醒"
+        verbose_name_plural = "提醒管理"
+
+    def __str__(self):
+        return self.title
+
+
+class ShortLink(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    code = models.SlugField(max_length=50, unique=True, verbose_name="短码")
+    target_url = models.URLField(max_length=1000, verbose_name="目标网址")
+    title = models.CharField(max_length=160, blank=True, default="", verbose_name="标题")
+    visits = models.PositiveIntegerField(default=0, verbose_name="访问次数")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "短链接"
+        verbose_name_plural = "短链接管理"
+
+    def __str__(self):
+        return self.code
+
+
+class Expense(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="金额")
+    category = models.CharField(max_length=80, blank=True, default="日常", verbose_name="分类")
+    note = models.CharField(max_length=200, blank=True, default="", verbose_name="备注")
+    spent_at = models.DateField(verbose_name="日期")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["-spent_at", "-created_at"]
+        verbose_name = "账本记录"
+        verbose_name_plural = "个人账本"
+
+    def __str__(self):
+        return f"{self.category} {self.amount}"
+
+
+class ImageProcessHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    operation = models.CharField(max_length=30, verbose_name="操作")
+    original_name = models.CharField(max_length=255, blank=True, default="", verbose_name="原始文件名")
+    result_file = models.FileField(upload_to="image-tools/", blank=True, null=True, verbose_name="结果文件")
+    result_text = models.TextField(blank=True, default="", verbose_name="结果文本")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "图片处理记录"
+        verbose_name_plural = "图片工具记录"
+
+    def __str__(self):
+        return f"{self.operation} - {self.original_name}"
+
+
+def image_asset_upload_path(instance, filename):
+    ext = _os.path.splitext(filename)[1].lower().lstrip(".")
+    return f"image-library/{ext or 'misc'}/{filename}"
+
+
+class ImageAsset(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="用户")
+    image = models.ImageField(upload_to=image_asset_upload_path, verbose_name="图片")
+    original_filename = models.CharField(max_length=255, blank=True, default="", verbose_name="原始文件名")
+    title = models.CharField(max_length=160, blank=True, default="", verbose_name="标题")
+    category = models.CharField(max_length=80, blank=True, default="", verbose_name="分类")
+    tags = models.CharField(max_length=200, blank=True, default="", verbose_name="标签")
+    is_favorite = models.BooleanField(default=False, verbose_name="收藏")
+    file_size = models.BigIntegerField(default=0, verbose_name="文件大小")
+    width = models.PositiveIntegerField(default=0, verbose_name="宽度")
+    height = models.PositiveIntegerField(default=0, verbose_name="高度")
+    content_hash = models.CharField(max_length=64, blank=True, default="", db_index=True, verbose_name="内容哈希")
+    is_user_deleted = models.BooleanField(default=False, db_index=True, verbose_name="用户已删除")
+    user_deleted_at = models.DateTimeField(blank=True, null=True, verbose_name="用户删除时间")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "图片素材"
+        verbose_name_plural = "图片整理"
+
+    def __str__(self):
+        return self.title or self.original_filename
+
+
 class AccessLog(models.Model):
     LOG_TYPES = (
         ("visit", "页面访问"),
@@ -194,11 +342,9 @@ class AccessLog(models.Model):
 
     def __str__(self):
         u = self.user.username if self.user else "匿名"
-        return f"[{self.get_log_type_display()}] {u} @ {self.ip_address}";
+        return f"[{self.get_log_type_display()}] {u} @ {self.ip_address}"
 
-# Add upload_ip to UploadedFile
 
-        file_icon.short_description = "类型"
 class FileConversion(models.Model):
     CONV_TYPES = (
         ("pdf2word", "PDF转Word"),

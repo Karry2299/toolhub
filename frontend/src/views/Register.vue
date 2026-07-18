@@ -22,42 +22,62 @@
         </div>
         <div class="field">
           <label>密码</label>
-          <input v-model="password" type="password" class="input" placeholder="输入密码（至少6位）" required minlength="6" />
+          <input v-model="password" type="password" class="input" placeholder="输入密码，至少 6 位" required minlength="6" />
         </div>
         <div class="field">
           <label>确认密码</label>
           <input v-model="confirmPwd" type="password" class="input" placeholder="再次输入密码" required />
         </div>
         <p v-if="error" class="auth-error">{{ error }}</p>
-        <button type="submit" class="btn btn-accent auth-btn" :disabled="loading">{{ loading ? "注册中..." : "注册" }}</button>
+        <button type="submit" class="btn btn-accent auth-btn" :disabled="loading">
+          {{ loading ? "注册中..." : "注册" }}
+        </button>
       </form>
       <p class="auth-footer">已有账号？ <router-link to="/login" class="auth-link">立即登录</router-link></p>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { auth } from "../auth.js"
+
 const router = useRouter()
-const username = ref(""); const password = ref(""); const confirmPwd = ref(""); const error = ref(""); const loading = ref(false)
+const username = ref("")
+const password = ref("")
+const confirmPwd = ref("")
+const error = ref("")
+const loading = ref(false)
+
 async function register() {
   error.value = ""
-  if (password.value !== confirmPwd.value) { error.value = "两次密码不一致"; return }
+  if (password.value !== confirmPwd.value) {
+    error.value = "两次密码不一致"
+    return
+  }
   loading.value = true
   try {
-    const r = await fetch("/api/auth/register/", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: username.value, password: password.value}) })
+    const r = await fetch("/api/auth/register/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.value, password: password.value }),
+    })
     const data = await r.json()
     if (r.ok) {
-      auth.login(data.token, {username: data.username, id: data.user_id, is_superuser: data.is_superuser})
+      auth.login(data.token, { username: data.username, id: data.user_id, is_superuser: data.is_superuser })
       router.push("/")
     } else {
       error.value = data.error || "注册失败"
     }
-  } catch(e) { error.value = "网络错误" }
-  finally { loading.value = false }
+  } catch (e) {
+    error.value = "网络错误"
+  } finally {
+    loading.value = false
+  }
 }
 </script>
+
 <style scoped>
 .auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 200px); }
 .auth-card { padding: 40px; max-width: 380px; width: 100%; }

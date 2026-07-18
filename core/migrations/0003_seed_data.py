@@ -5,7 +5,6 @@ from django.utils import timezone
 def seed_data(apps, schema_editor):
     Note = apps.get_model('core', 'Note')
     Todo = apps.get_model('core', 'Todo')
-    GeneratedPassword = apps.get_model('core', 'GeneratedPassword')
     SavedQRCode = apps.get_model('core', 'SavedQRCode')
     IPLookupHistory = apps.get_model('core', 'IPLookupHistory')
     ToolUsage = apps.get_model('core', 'ToolUsage')
@@ -30,13 +29,6 @@ def seed_data(apps, schema_editor):
     ]
     Todo.objects.bulk_create(todos)
 
-    # Sample password records
-    passwords = [
-        GeneratedPassword(password='aB3#kL9@mN7&', length=16, has_upper=True, has_lower=True, has_digits=True, has_symbols=True),
-        GeneratedPassword(password='MyStr0ng!Pass', length=14, has_upper=True, has_lower=True, has_digits=True, has_symbols=True),
-    ]
-    GeneratedPassword.objects.bulk_create(passwords)
-
     # Sample QR codes
     qrcodes = [
         SavedQRCode(content='https://github.com', size=200),
@@ -55,7 +47,6 @@ def seed_data(apps, schema_editor):
     usages = [
         ToolUsage(tool='notes', action='create', detail='创建了确认笔记'),
         ToolUsage(tool='todo', action='create', detail='添加了待办事项'),
-        ToolUsage(tool='password', action='generate', detail='生成了密码长度:16'),
         ToolUsage(tool='qrcode', action='generate', detail='https://github.com'),
         ToolUsage(tool='ip', action='lookup', detail='8.8.8.8'),
     ]

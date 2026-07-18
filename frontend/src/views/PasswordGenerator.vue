@@ -28,20 +28,18 @@
       </div>
     </div>
 
-    <!-- Save Dialog -->
-    <div v-if="showSave" class="share-modal" @click="showSave=false">
+    <div v-if="showSave" class="share-modal" @click="showSave = false">
       <div class="share-box card" @click.stop>
         <h3>保存密码</h3>
         <div class="saved-pwd-display">{{ password }}</div>
         <textarea v-model="saveNote" class="input" rows="3" placeholder="添加备注说明（可选）"></textarea>
         <div class="dialog-actions">
-          <button @click="showSave=false" class="btn btn-ghost">取消</button>
+          <button @click="showSave = false" class="btn btn-ghost">取消</button>
           <button @click="savePassword" class="btn btn-accent">保存</button>
         </div>
       </div>
     </div>
 
-    <!-- Saved Passwords History -->
     <div class="saved-section" v-if="savedPasswords.length > 0">
       <h3 class="sub-title">已保存的密码</h3>
       <div class="saved-list">
@@ -63,6 +61,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { authHeaders } from "../auth.js"
+
 const password = ref("")
 const length = ref(16)
 const useUpper = ref(true)
@@ -80,15 +79,22 @@ function generate() {
   if (useLower.value) chars += "abcdefghijklmnopqrstuvwxyz"
   if (useDigits.value) chars += "0123456789"
   if (useSymbols.value) chars += "!@#$%^&*()_+{}[]:;<>,.?/~"
-  if (!chars) { password.value = "请选择至少一种字符类型"; return }
+  if (!chars) {
+    password.value = "请至少选择一种字符类型"
+    return
+  }
   let result = ""
   for (let i = 0; i < length.value; i++) result += chars[Math.floor(Math.random() * chars.length)]
   password.value = result
 }
 
 async function copyPwd() {
-  try { await navigator.clipboard.writeText(password.value); alert("已复制到剪贴板") }
-  catch(e) { console.error(e) }
+  try {
+    await navigator.clipboard.writeText(password.value)
+    alert("已复制到剪贴板")
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function savePassword() {
@@ -100,7 +106,7 @@ async function savePassword() {
       has_lower: useLower.value,
       has_digits: useDigits.value,
       has_symbols: useSymbols.value,
-      note: saveNote.value
+      note: saveNote.value,
     }
     const r = await fetch(API, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) })
     if (r.ok) {
@@ -110,14 +116,18 @@ async function savePassword() {
       saveNote.value = ""
       alert("密码已保存")
     }
-  } catch(e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function deleteSaved(id) {
   try {
     await fetch(API + id + "/", { method: "DELETE", headers: authHeaders() })
     savedPasswords.value = savedPasswords.value.filter(x => x.id !== id)
-  } catch(e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 function formatTime(dateStr) {
@@ -142,8 +152,12 @@ const strengthText = computed(() => {
 })
 
 async function fetchSaved() {
-  try { const r = await fetch(API, { headers: authHeaders() }); savedPasswords.value = await r.json() }
-  catch(e) { console.error(e) }
+  try {
+    const r = await fetch(API, { headers: authHeaders() })
+    savedPasswords.value = await r.json()
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 generate()
@@ -166,8 +180,6 @@ onMounted(fetchSaved)
 .strength-medium { color: var(--bg-accent); }
 .strength-strong { color: var(--bg-success); }
 .strength-vstrong { color: var(--bg-success); font-weight: 700; }
-
-/* Saved */
 .sub-title { font-size: 1.1em; font-weight: 600; margin: 32px 0 16px; color: var(--text-primary); }
 .saved-list { display: flex; flex-direction: column; gap: 10px; }
 .saved-item { padding: 14px 18px; }
@@ -177,8 +189,6 @@ onMounted(fetchSaved)
 .saved-note { color: var(--text-secondary); }
 .saved-time { white-space: nowrap; }
 .action-btn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-
-/* Dialog */
 .share-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 999; }
 .share-box { padding: 24px; max-width: 420px; width: 90%; display: flex; flex-direction: column; gap: 14px; }
 .share-box h3 { font-size: 1.1em; font-weight: 600; }

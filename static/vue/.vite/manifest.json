@@ -1,12 +1,16 @@
 {
   "index.html": {
-    "file": "assets/index-hmpoQd-t.js",
+    "file": "assets/index-CyTECZxJ.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "dynamicImports": [
+      "src/views/Dashboard.vue",
       "src/views/Notes.vue",
       "src/views/Todo.vue",
+      "src/views/Productivity.vue",
+      "src/views/UtilityTools.vue",
+      "src/views/ImageOrganizer.vue",
       "src/views/PasswordGenerator.vue",
       "src/views/QrGenerator.vue",
       "src/views/IpLookup.vue",
@@ -16,11 +20,23 @@
       "src/views/Register.vue"
     ],
     "css": [
-      "assets/index-B2lKEBYa.css"
+      "assets/index-C0X1wtNq.css"
+    ]
+  },
+  "src/views/Dashboard.vue": {
+    "file": "assets/Dashboard-ZegjO7dQ.js",
+    "name": "Dashboard",
+    "src": "src/views/Dashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Dashboard-hYnT0Pwf.css"
     ]
   },
   "src/views/FileManager.vue": {
-    "file": "assets/FileManager-DBUyUdxv.js",
+    "file": "assets/FileManager-DQhbbUhR.js",
     "name": "FileManager",
     "src": "src/views/FileManager.vue",
     "isDynamicEntry": true,
@@ -28,11 +44,11 @@
       "index.html"
     ],
     "css": [
-      "assets/FileManager-qlVg_Iaw.css"
+      "assets/FileManager-DhuwRiih.css"
     ]
   },
   "src/views/FileTools.vue": {
-    "file": "assets/FileTools-qFfFfXmM.js",
+    "file": "assets/FileTools-PY7OeZxQ.js",
     "name": "FileTools",
     "src": "src/views/FileTools.vue",
     "isDynamicEntry": true,
@@ -43,8 +59,20 @@
       "assets/FileTools-BAiXjgV3.css"
     ]
   },
+  "src/views/ImageOrganizer.vue": {
+    "file": "assets/ImageOrganizer-D3QuBPGO.js",
+    "name": "ImageOrganizer",
+    "src": "src/views/ImageOrganizer.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/ImageOrganizer-CvnbT8J2.css"
+    ]
+  },
   "src/views/IpLookup.vue": {
-    "file": "assets/IpLookup-B_OVE03D.js",
+    "file": "assets/IpLookup-CTBA4V7J.js",
     "name": "IpLookup",
     "src": "src/views/IpLookup.vue",
     "isDynamicEntry": true,
@@ -52,11 +80,11 @@
       "index.html"
     ],
     "css": [
-      "assets/IpLookup-TRrdAJWL.css"
+      "assets/IpLookup-Czzg6FA0.css"
     ]
   },
   "src/views/Login.vue": {
-    "file": "assets/Login-Bnnhqcli.js",
+    "file": "assets/Login-gQKHG1lZ.js",
     "name": "Login",
     "src": "src/views/Login.vue",
     "isDynamicEntry": true,
@@ -64,11 +92,11 @@
       "index.html"
     ],
     "css": [
-      "assets/Login-Cc7dSKYy.css"
+      "assets/Login-DYi27WgB.css"
     ]
   },
   "src/views/Notes.vue": {
-    "file": "assets/Notes-DyyToL2B.js",
+    "file": "assets/Notes-D8UHLCEo.js",
     "name": "Notes",
     "src": "src/views/Notes.vue",
     "isDynamicEntry": true,
@@ -76,11 +104,11 @@
       "index.html"
     ],
     "css": [
-      "assets/Notes-nvUgCBQe.css"
+      "assets/Notes-SmEouzuM.css"
     ]
   },
   "src/views/PasswordGenerator.vue": {
-    "file": "assets/PasswordGenerator-CXMi8qfC.js",
+    "file": "assets/PasswordGenerator-h5xzc6Uk.js",
     "name": "PasswordGenerator",
     "src": "src/views/PasswordGenerator.vue",
     "isDynamicEntry": true,
@@ -88,11 +116,23 @@
       "index.html"
     ],
     "css": [
-      "assets/PasswordGenerator-C311oUFE.css"
+      "assets/PasswordGenerator-DeMMPRB-.css"
+    ]
+  },
+  "src/views/Productivity.vue": {
+    "file": "assets/Productivity-D7ZoEb1n.js",
+    "name": "Productivity",
+    "src": "src/views/Productivity.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/Productivity-Vkp6IZ13.css"
     ]
   },
   "src/views/QrGenerator.vue": {
-    "file": "assets/QrGenerator-DDEV3WHk.js",
+    "file": "assets/QrGenerator-BKpggU7x.js",
     "name": "QrGenerator",
     "src": "src/views/QrGenerator.vue",
     "isDynamicEntry": true,
@@ -100,11 +140,11 @@
       "index.html"
     ],
     "css": [
-      "assets/QrGenerator-Be1OdrZG.css"
+      "assets/QrGenerator-D4msx_sA.css"
     ]
   },
   "src/views/Register.vue": {
-    "file": "assets/Register-RmLZiDQY.js",
+    "file": "assets/Register-CPlmh7tt.js",
     "name": "Register",
     "src": "src/views/Register.vue",
     "isDynamicEntry": true,
@@ -112,11 +152,11 @@
       "index.html"
     ],
     "css": [
-      "assets/Register-BHSbDEbJ.css"
+      "assets/Register-BeUSYkvO.css"
     ]
   },
   "src/views/Todo.vue": {
-    "file": "assets/Todo-xOj6I36t.js",
+    "file": "assets/Todo-DqutM8Vn.js",
     "name": "Todo",
     "src": "src/views/Todo.vue",
     "isDynamicEntry": true,
@@ -124,7 +164,19 @@
       "index.html"
     ],
     "css": [
-      "assets/Todo-BH5wAlM_.css"
+      "assets/Todo-CbHxwpzM.css"
+    ]
+  },
+  "src/views/UtilityTools.vue": {
+    "file": "assets/UtilityTools-DQqdl50K.js",
+    "name": "UtilityTools",
+    "src": "src/views/UtilityTools.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ],
+    "css": [
+      "assets/UtilityTools-GNmwVvRA.css"
     ]
   }
 }

@@ -14,7 +14,7 @@ DOMAIN="yourdomain.com"              # 你的域名
 GIT_REPO="https://github.com/Karry2299/toolhub.git"
 DB_PASSWORD=$(openssl rand -base64 16)  # 自动生成数据库密码
 ADMIN_USER="admin"
-ADMIN_PASSWORD="admin123"            # 首次登录后请修改
+ADMIN_PASSWORD=$(openssl rand -base64 18)  # 首次登录后请修改
 
 # ============================================
 
