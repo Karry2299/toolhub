@@ -33,6 +33,19 @@
             <router-link to="/files" class="nav-link">文件</router-link>
           </nav>
           <div class="header-right">
+            <div class="theme-switcher" title="切换网站风格">
+              <button
+                v-for="item in themes"
+                :key="item.key"
+                class="theme-dot"
+                :class="{ active: theme === item.key }"
+                :style="{ '--theme-color': item.color }"
+                :title="item.name"
+                @click="setTheme(item.key)"
+              >
+                <span class="sr-only">{{ item.name }}</span>
+              </button>
+            </div>
             <span class="user-name">{{ auth.user?.username }}</span>
             <button @click="handleLogout" class="btn btn-ghost logout-btn">退出</button>
           </div>
@@ -43,15 +56,49 @@
       </main>
     </template>
     <template v-else>
+      <div class="guest-theme-switcher" title="切换网站风格">
+        <button
+          v-for="item in themes"
+          :key="item.key"
+          class="theme-dot"
+          :class="{ active: theme === item.key }"
+          :style="{ '--theme-color': item.color }"
+          :title="item.name"
+          @click="setTheme(item.key)"
+        >
+          <span class="sr-only">{{ item.name }}</span>
+        </button>
+      </div>
       <router-view />
     </template>
   </div>
 </template>
 
 <script setup>
+import { onMounted, ref } from "vue"
 import { auth, authHeaders } from "./auth.js"
 import { useRouter } from "vue-router"
 const router = useRouter()
+
+const themes = [
+  { key: "classic", name: "经典", color: "#f59e0b" },
+  { key: "ocean", name: "海蓝", color: "#0ea5e9" },
+  { key: "forest", name: "森林", color: "#16a34a" },
+  { key: "sunset", name: "暮色", color: "#e11d48" },
+  { key: "midnight", name: "暗夜", color: "#8b5cf6" },
+]
+
+const savedTheme = localStorage.getItem("toolhub-theme")
+const theme = ref(themes.some((item) => item.key === savedTheme) ? savedTheme : "classic")
+
+function setTheme(nextTheme) {
+  theme.value = nextTheme
+  document.documentElement.dataset.theme = nextTheme
+  localStorage.setItem("toolhub-theme", nextTheme)
+}
+
+onMounted(() => setTheme(theme.value))
+
 async function handleLogout() {
   try { await fetch("/api/auth/logout/", { method: "POST", headers: authHeaders() }) } catch (e) {}
   auth.logout()
@@ -94,6 +141,52 @@ async function handleLogout() {
 .nav-link.router-link-active { color: var(--text-inverse); background: rgba(245,158,11,0.15); }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .user-name { color: rgba(255,255,255,0.8); font-size: 0.85em; font-weight: 500; }
+.theme-switcher,
+.guest-theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+}
+.guest-theme-switcher {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  border-color: var(--border-default);
+  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+  box-shadow: var(--shadow-md);
+}
+.theme-dot {
+  width: 22px;
+  height: 22px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--theme-color);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+  transition: transform 0.16s ease, border-color 0.16s ease;
+}
+.theme-dot:hover { transform: translateY(-1px); }
+.theme-dot.active {
+  border-color: var(--text-inverse);
+  transform: scale(1.08);
+}
+.guest-theme-switcher .theme-dot.active { border-color: var(--text-primary); }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .logout-btn {
   color: rgba(255,255,255,0.6) !important;
   border-color: rgba(255,255,255,0.15) !important;
@@ -103,5 +196,11 @@ async function handleLogout() {
 .app-main {
   max-width: var(--max-width); margin: 0 auto; padding: 32px 24px;
   min-height: calc(100vh - var(--header-height));
+}
+
+@media (max-width: 920px) {
+  .app-nav { display: none; }
+  .theme-switcher { gap: 4px; }
+  .theme-dot { width: 20px; height: 20px; }
 }
 </style>
