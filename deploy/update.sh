@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_NAME="${TOOLHUB_SERVICE_NAME:-toolhub}"
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:${PATH}"
 
 echo "==========================================="
 echo "  ToolHub deploy update"
@@ -14,7 +15,24 @@ cd "${APP_DIR}"
 echo ""
 echo "[1/6] Pull latest code..."
 git config --global --add safe.directory "${APP_DIR}" >/dev/null 2>&1 || true
-git pull --ff-only
+git config --global http.version HTTP/1.1 >/dev/null 2>&1 || true
+git config --global http.postBuffer 524288000 >/dev/null 2>&1 || true
+
+pull_ok=0
+for attempt in 1 2 3; do
+  echo "Git pull attempt ${attempt}/3..."
+  if git pull --ff-only; then
+    pull_ok=1
+    break
+  fi
+  echo "Git pull failed, retrying in 5 seconds..."
+  sleep 5
+done
+
+if [ "${pull_ok}" -ne 1 ]; then
+  echo "Git pull failed after 3 attempts."
+  exit 1
+fi
 
 echo ""
 echo "[2/6] Install Python dependencies..."
@@ -27,6 +45,12 @@ python -m pip install -r requirements.txt
 
 echo ""
 echo "[3/6] Build Vue frontend..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm command not found. Install Node.js 20+ and make sure npm is available in /usr/bin or /usr/local/bin."
+  exit 127
+fi
+echo "Node version: $(node -v 2>/dev/null || echo unavailable)"
+echo "npm version: $(npm -v)"
 cd frontend
 if [ -f "package-lock.json" ]; then
   npm ci
