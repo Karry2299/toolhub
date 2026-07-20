@@ -199,8 +199,56 @@ async function handleLogout() {
 }
 
 @media (max-width: 920px) {
-  .app-nav { display: none; }
+  .app-header { position: sticky; }
+  .header-inner {
+    height: auto;
+    min-height: var(--header-height);
+    padding: 10px 14px 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .logo { flex: 1; min-width: 120px; }
+  .app-nav {
+    order: 3;
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 0 2px;
+    scrollbar-width: none;
+  }
+  .app-nav::-webkit-scrollbar { display: none; }
+  .nav-link {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 0.86em;
+    background: rgba(255,255,255,0.05);
+  }
+  .header-right {
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .user-name { display: none; }
+  .logout-btn {
+    padding: 6px 10px;
+    font-size: 0.8em;
+  }
   .theme-switcher { gap: 4px; }
   .theme-dot { width: 20px; height: 20px; }
+  .app-main {
+    padding: 18px 12px 28px;
+    min-height: calc(100vh - 112px);
+  }
+}
+
+@media (max-width: 420px) {
+  .logo-text { font-size: 1.05em; }
+  .theme-dot { width: 18px; height: 18px; }
+  .theme-switcher { padding: 3px; }
+  .logout-btn { padding: 6px 8px; }
+  .guest-theme-switcher {
+    top: 10px;
+    right: 10px;
+  }
 }
 </style>
