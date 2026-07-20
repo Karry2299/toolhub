@@ -1,0 +1,23 @@
+<view class="page login-page">
+  <view class="brand">
+    <view class="logo">T</view>
+    <view class="title">ToolHub</view>
+    <view class="subtle">登录你的个人工具空间</view>
+  </view>
+
+  <view class="card form-card">
+    <view class="segmented">
+      <view class="seg {{mode === 'login' ? 'active' : ''}}" bindtap="setLogin">登录</view>
+      <view class="seg {{mode === 'register' ? 'active' : ''}}" bindtap="setRegister">注册</view>
+    </view>
+
+    <input class="input" placeholder="用户名" value="{{username}}" bindinput="onUsername" />
+    <input class="input" password placeholder="密码" value="{{password}}" bindinput="onPassword" />
+
+    <button class="btn btn-accent" loading="{{loading}}" bindtap="submit">
+      {{mode === 'login' ? '登录' : '注册并登录'}}
+    </button>
+  </view>
+
+  <view class="tip">小程序端复用你网站的账号和数据。</view>
+</view>

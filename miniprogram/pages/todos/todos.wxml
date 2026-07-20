@@ -1,0 +1,22 @@
+<view class="page">
+  <view class="title">待办事项</view>
+  <view class="subtle head-sub">管理今天要完成的事情</view>
+
+  <view class="add card">
+    <input class="input" placeholder="输入新任务" value="{{newTitle}}" bindinput="onInput" confirm-type="done" bindconfirm="addTodo" />
+    <button class="btn btn-accent" loading="{{adding}}" bindtap="addTodo">添加</button>
+  </view>
+
+  <view class="filters">
+    <view class="filter {{filter === 'all' ? 'active' : ''}}" data-filter="all" bindtap="setFilter">全部</view>
+    <view class="filter {{filter === 'open' ? 'active' : ''}}" data-filter="open" bindtap="setFilter">未完成</view>
+    <view class="filter {{filter === 'done' ? 'active' : ''}}" data-filter="done" bindtap="setFilter">已完成</view>
+  </view>
+
+  <view class="empty" wx:if="{{!visibleTodos.length}}">暂无待办</view>
+  <view class="todo card" wx:for="{{visibleTodos}}" wx:key="id">
+    <checkbox checked="{{item.completed}}" data-id="{{item.id}}" bindtap="toggleTodo" />
+    <view class="todo-title {{item.completed ? 'done' : ''}}">{{item.title}}</view>
+    <text class="delete" data-id="{{item.id}}" bindtap="deleteTodo">删除</text>
+  </view>
+</view>

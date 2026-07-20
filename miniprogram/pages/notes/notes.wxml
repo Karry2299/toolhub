@@ -1,0 +1,28 @@
+<view class="page">
+  <view class="between head">
+    <view>
+      <view class="title">笔记</view>
+      <view class="subtle">随手记录想法和备忘</view>
+    </view>
+    <button class="mini-btn" bindtap="newNote">新建</button>
+  </view>
+
+  <view class="card editor" wx:if="{{editing}}">
+    <input class="input" placeholder="标题" value="{{form.title}}" bindinput="onTitle" />
+    <textarea class="textarea" placeholder="内容" value="{{form.content}}" bindinput="onContent"></textarea>
+    <view class="actions">
+      <button class="btn btn-ghost" bindtap="cancelEdit">取消</button>
+      <button class="btn btn-accent" loading="{{saving}}" bindtap="saveNote">保存</button>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!notes.length && !loading}}">暂无笔记</view>
+  <view class="note card" wx:for="{{notes}}" wx:key="id" bindtap="editNote" data-id="{{item.id}}">
+    <view class="note-title">{{item.title || '无标题'}}</view>
+    <view class="subtle preview">{{item.preview || item.content}}</view>
+    <view class="between footer">
+      <text>{{item.updated_at_text}}</text>
+      <text catchtap="deleteNote" data-id="{{item.id}}" class="delete">删除</text>
+    </view>
+  </view>
+</view>

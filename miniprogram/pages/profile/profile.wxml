@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="card profile">
+    <view class="avatar">{{initial}}</view>
+    <view>
+      <view class="title">{{user.username || '未登录'}}</view>
+      <view class="subtle">ToolHub 小程序端</view>
+    </view>
+  </view>
+  <view class="card item">
+    <view>服务器地址</view>
+    <view class="subtle">{{apiBaseUrl}}</view>
+  </view>
+  <button class="btn btn-ghost logout" bindtap="logout">退出登录</button>
+</view>

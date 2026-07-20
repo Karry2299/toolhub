@@ -1,0 +1,18 @@
+<view class="page">
+  <view class="hero card">
+    <view>
+      <view class="hello">你好，{{user.username || 'ToolHub 用户'}}</view>
+      <view class="title">个人实用工具</view>
+      <view class="subtle">把网站常用功能装进口袋里</view>
+    </view>
+    <view class="hero-mark">T</view>
+  </view>
+
+  <view class="quick-grid">
+    <view class="quick card" wx:for="{{tools}}" wx:key="url" bindtap="openTool" data-url="{{item.url}}">
+      <view class="icon">{{item.icon}}</view>
+      <view class="name">{{item.name}}</view>
+      <view class="subtle desc">{{item.desc}}</view>
+    </view>
+  </view>
+</view>

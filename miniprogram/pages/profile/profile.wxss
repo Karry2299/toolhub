@@ -1,0 +1,4 @@
+.profile { display: flex; gap: 22rpx; align-items: center; padding: 28rpx; margin-bottom: 22rpx; }
+.avatar { width: 96rpx; height: 96rpx; line-height: 96rpx; border-radius: 28rpx; text-align: center; color: #f59e0b; background: #0f172a; font-size: 42rpx; font-weight: 850; }
+.item { padding: 24rpx; margin-bottom: 22rpx; }
+.logout { margin-top: 20rpx; }

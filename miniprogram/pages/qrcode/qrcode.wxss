@@ -1,0 +1,7 @@
+.head-sub { margin: 8rpx 0 22rpx; }
+.panel { padding: 24rpx; }
+.panel .btn { margin-top: 16rpx; }
+.result { padding: 24rpx; margin-top: 20rpx; text-align: center; }
+.qr { width: 420rpx; height: 420rpx; margin-bottom: 12rpx; }
+.section { margin: 28rpx 0 14rpx; font-weight: 750; }
+.record { padding: 20rpx; margin-bottom: 14rpx; word-break: break-all; }

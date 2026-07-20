@@ -1,0 +1,44 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/notes/notes",
+    "pages/todos/todos",
+    "pages/dashboard/dashboard",
+    "pages/password/password",
+    "pages/qrcode/qrcode",
+    "pages/profile/profile",
+    "pages/login/login"
+  ],
+  "window": {
+    "navigationBarTitleText": "ToolHub",
+    "navigationBarBackgroundColor": "#0f172a",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f3f5f8"
+  },
+  "tabBar": {
+    "color": "#64748b",
+    "selectedColor": "#f59e0b",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/notes/notes",
+        "text": "笔记"
+      },
+      {
+        "pagePath": "pages/todos/todos",
+        "text": "待办"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

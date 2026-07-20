@@ -1,0 +1,10 @@
+.head-sub { margin: 8rpx 0 22rpx; }
+.add { padding: 20rpx; display: grid; grid-template-columns: 1fr 150rpx; gap: 14rpx; margin-bottom: 18rpx; }
+.filters { display: flex; gap: 12rpx; margin-bottom: 18rpx; }
+.filter { flex: 1; text-align: center; padding: 18rpx 0; color: #64748b; border-radius: 14rpx; background: #eaf0f6; }
+.filter.active { color: #ffffff; background: #0f172a; }
+.todo { display: flex; align-items: center; gap: 18rpx; padding: 22rpx; margin-bottom: 16rpx; }
+.todo-title { flex: 1; word-break: break-all; }
+.done { color: #94a3b8; text-decoration: line-through; }
+.delete { color: #ef4444; font-size: 24rpx; }
+.empty { padding: 80rpx 0; color: #94a3b8; text-align: center; }

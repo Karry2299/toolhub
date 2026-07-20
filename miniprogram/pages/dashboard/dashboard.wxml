@@ -1,0 +1,26 @@
+<view class="page">
+  <view class="title">个人仪表盘</view>
+  <view class="subtle head-sub">近期数据概览</view>
+
+  <view class="stats">
+    <view class="stat card" wx:for="{{stats}}" wx:key="label">
+      <view class="value">{{item.value}}</view>
+      <view class="subtle">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="card panel">
+    <view class="panel-title">最近笔记</view>
+    <view class="empty" wx:if="{{!recentNotes.length}}">暂无笔记</view>
+    <view class="row-item" wx:for="{{recentNotes}}" wx:key="id">{{item.title}}</view>
+  </view>
+
+  <view class="card panel">
+    <view class="panel-title"> upcoming reminders </view>
+    <view class="empty" wx:if="{{!upcomingReminders.length}}">暂无提醒</view>
+    <view class="row-item" wx:for="{{upcomingReminders}}" wx:key="id">
+      <view>{{item.title}}</view>
+      <view class="subtle">{{item.remind_at}}</view>
+    </view>
+  </view>
+</view>
