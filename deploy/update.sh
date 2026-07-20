@@ -79,7 +79,13 @@ fi
 echo ""
 echo "[6/6] Restart service..."
 if command -v systemctl >/dev/null 2>&1; then
-  systemctl restart "${SERVICE_NAME}"
+  if command -v systemd-run >/dev/null 2>&1; then
+    systemd-run --unit="${SERVICE_NAME}-delayed-restart" --on-active=3 /bin/systemctl restart "${SERVICE_NAME}"
+    echo "Scheduled ${SERVICE_NAME} restart in 3 seconds."
+  else
+    nohup bash -c "sleep 3; systemctl restart '${SERVICE_NAME}'" >/dev/null 2>&1 &
+    echo "Scheduled ${SERVICE_NAME} restart in 3 seconds."
+  fi
 else
   echo "systemctl not found; skipped service restart."
 fi
